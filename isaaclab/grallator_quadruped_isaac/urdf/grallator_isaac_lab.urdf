@@ -1,0 +1,619 @@
+<?xml version='1.0' encoding='utf-8'?>
+<robot name="grallator_isaac_lab">
+  <link name="trunk">
+    <inertial>
+      <origin xyz="0.05 0 0.03" rpy="0 0 0" />
+      <mass value="12.000000" />
+      <inertia ixx="0.056" iyy="0.531" izz="0.563" ixy="0" ixz="0" iyz="0" />
+    </inertial>
+    <visual>
+      <origin xyz="0 0 0" rpy="0 0 0" />
+      <geometry>
+        <mesh filename="../meshes/base_link.STL" />
+      </geometry>
+      <material name="auto_mat_5821239353059741668">
+        <color rgba="0.698039215686274 0.698039215686274 0.698039215686274 1" />
+      </material>
+    </visual>
+    <collision name="trunk_collision">
+      <origin xyz="-0.035 0 0" rpy="0 0 0" />
+      <geometry>
+        <box size="0.72 0.21 0.11" />
+      </geometry>
+    </collision>
+    <collision name="top_sensor_collision">
+      <origin xyz="0.24 0 0.09" rpy="0 0 0" />
+      <geometry>
+        <box size="0.1 0.07 0.05" />
+      </geometry>
+    </collision>
+  </link>
+  <link name="FR_hip">
+    <inertial>
+      <origin xyz="0.0422658 0.0029172 -0.00194417" rpy="0.00175072737 0.00899899735 1.56940926" />
+      <mass value="2.068198" />
+      <inertia ixx="0.0058451364" iyy="0.004962876" izz="0.0043981895" ixy="0" ixz="0" iyz="0" />
+    </inertial>
+    <visual>
+      <origin xyz="0 0 0" rpy="0 0 0" />
+      <geometry>
+        <mesh filename="../meshes/FRABAD.STL" />
+      </geometry>
+      <material name="auto_mat_3496808709860041112">
+        <color rgba="0.792156862745098 0.819607843137255 0.933333333333333 1" />
+      </material>
+    </visual>
+    <collision name="FRABAD_collision">
+      <origin xyz="0.035 0 0" rpy="0 0 0" />
+      <geometry>
+        <sphere radius="0.055" />
+      </geometry>
+    </collision>
+  </link>
+  <joint name="FR_hip_joint" type="revolute">
+    <origin xyz="0.3925 -0.103268106 0.0782852824" rpy="0 0 0" />
+    <parent link="trunk" />
+    <child link="FR_hip" />
+    <axis xyz="1 0 0" />
+    <limit lower="-0.79" upper="0.79" effort="90" velocity="18.85" />
+    <dynamics damping="0.6" friction="0.1" />
+  </joint>
+  <link name="FR_thigh">
+    <inertial>
+      <origin xyz="-0.0367727 -0.0746392 -0.0637936" rpy="0.537728487 0.000288619694 1.56932826" />
+      <mass value="3.028174" />
+      <inertia ixx="0.016592203" iyy="0.014462668" izz="0.0023553611" ixy="0" ixz="0" iyz="0" />
+    </inertial>
+    <visual>
+      <origin xyz="0 0 0" rpy="0 0 0" />
+      <geometry>
+        <mesh filename="../meshes/FRHIP.STL" />
+      </geometry>
+      <material name="auto_mat_3496808709860041112">
+        <color rgba="0.792156862745098 0.819607843137255 0.933333333333333 1" />
+      </material>
+    </visual>
+    <collision name="FRHIP_collision">
+      <origin xyz="0 0 0" rpy="0 0 0" />
+      <geometry>
+        <sphere radius="0.055" />
+      </geometry>
+    </collision>
+    <collision name="FR_thigh_collision_cylinder">
+      <origin xyz="-0.0869669899 -0.062625 -0.146832277" rpy="2.73844622 -0.498845918 -1.78940138" />
+      <geometry>
+        <cylinder radius="0.034" length="0.363564936" />
+      </geometry>
+    </collision>
+    <collision name="FR_thigh_collision_sphere_1">
+      <origin xyz="0 0 0" rpy="0 0 0" />
+      <geometry>
+        <sphere radius="0.034" />
+      </geometry>
+    </collision>
+    <collision name="FR_thigh_collision_sphere_2">
+      <origin xyz="-0.17393398 -0.12525 -0.293664555" rpy="0 0 0" />
+      <geometry>
+        <sphere radius="0.034" />
+      </geometry>
+    </collision>
+  </link>
+  <joint name="FR_thigh_joint" type="revolute">
+    <origin xyz="0.0972158663 -0.00373189417 -0.00254488836" rpy="0 0 0" />
+    <parent link="FR_hip" />
+    <child link="FR_thigh" />
+    <axis xyz="0 -1 0" />
+    <limit lower="-1.68" upper="1.68" effort="90" velocity="18.85" />
+    <dynamics damping="0.6" friction="0.1" />
+  </joint>
+  <link name="FR_calf">
+    <inertial>
+      <origin xyz="0.0641115 -0.0078228 -0.0922608" rpy="-0.550860476 6.292821e-05 1.57100287" />
+      <mass value="1.752629" />
+      <inertia ixx="0.015809715" iyy="0.01557616" izz="0.00039865176" ixy="0" ixz="0" iyz="0" />
+    </inertial>
+    <visual>
+      <origin xyz="0 0 0" rpy="0 0 0" />
+      <geometry>
+        <mesh filename="../meshes/FRKNEE.STL" />
+      </geometry>
+      <material name="auto_mat_5821239353059741668">
+        <color rgba="0.698039215686274 0.698039215686274 0.698039215686274 1" />
+      </material>
+    </visual>
+    <collision name="FR_shank_collision_cylinder">
+      <origin xyz="0.082295 -0.002875 -0.149915" rpy="3.12241747 0.501954858 3.06683413" />
+      <geometry>
+        <cylinder radius="0.034" length="0.342083264" />
+      </geometry>
+    </collision>
+    <collision name="FR_shank_collision_sphere_1">
+      <origin xyz="0 0 0" rpy="0 0 0" />
+      <geometry>
+        <sphere radius="0.034" />
+      </geometry>
+    </collision>
+    <collision name="FR_shank_collision_sphere_2">
+      <origin xyz="0.16459 -0.00575 -0.29983" rpy="0 0 0" />
+      <geometry>
+        <sphere radius="0.034" />
+      </geometry>
+    </collision>
+  </link>
+  <joint name="FR_calf_joint" type="revolute">
+    <origin xyz="-0.17393398 -0.12525 -0.293664555" rpy="0 0 0" />
+    <parent link="FR_thigh" />
+    <child link="FR_calf" />
+    <axis xyz="0 1 0" />
+    <limit lower="-1.56" upper="0" effort="90" velocity="18.85" />
+    <dynamics damping="0.6" friction="0.1" />
+  </joint>
+  <link name="FR_foot">
+    <inertial>
+      <origin xyz="0 0 0" rpy="0 0 0" />
+      <mass value="0.001000" />
+      <inertia ixx="1e-06" iyy="1e-06" izz="1e-06" ixy="0" ixz="0" iyz="0" />
+    </inertial>
+    <visual>
+      <origin xyz="0 0 0" rpy="0 0 0" />
+      <geometry>
+        <mesh filename="../meshes/FRFoot.STL" />
+      </geometry>
+      <material name="auto_mat_5433279214290689598">
+        <color rgba="0.298039215686275 0.298039215686275 0.298039215686275 1" />
+      </material>
+    </visual>
+    <collision name="FR_foot_collision">
+      <origin xyz="0 0 0" rpy="0 0 0" />
+      <geometry>
+        <sphere radius="0.04" />
+      </geometry>
+    </collision>
+  </link>
+  <joint name="FR_calf_to_FR_foot_fixed" type="fixed">
+    <origin xyz="0.16459 -0.00575 -0.29983" rpy="0 0 0" />
+    <parent link="FR_calf" />
+    <child link="FR_foot" />
+  </joint>
+  <link name="FL_hip">
+    <inertial>
+      <origin xyz="0.0422658 -0.000227935 -0.00350336" rpy="0.0013271744 -0.000157446059 1.57054275" />
+      <mass value="2.088075" />
+      <inertia ixx="0.0058788153" iyy="0.0050105737" izz="0.0044629583" ixy="0" ixz="0" iyz="0" />
+    </inertial>
+    <visual>
+      <origin xyz="0 0 0" rpy="0 0 0" />
+      <geometry>
+        <mesh filename="../meshes/FLABAD.STL" />
+      </geometry>
+      <material name="auto_mat_3496808709860041112">
+        <color rgba="0.792156862745098 0.819607843137255 0.933333333333333 1" />
+      </material>
+    </visual>
+    <collision name="FLABAD_collision">
+      <origin xyz="0.035 0 0" rpy="0 0 0" />
+      <geometry>
+        <sphere radius="0.055" />
+      </geometry>
+    </collision>
+  </link>
+  <joint name="FL_hip_joint" type="revolute">
+    <origin xyz="0.3925 0.1 0.0801721242" rpy="0 0 0" />
+    <parent link="trunk" />
+    <child link="FL_hip" />
+    <axis xyz="1 0 0" />
+    <limit lower="-0.79" upper="0.79" effort="90" velocity="18.85" />
+    <dynamics damping="0.6" friction="0.1" />
+  </joint>
+  <link name="FL_thigh">
+    <inertial>
+      <origin xyz="-0.0337775 0.0725643 -0.0456768" rpy="0.544333835 -0.000953221154 1.57184458" />
+      <mass value="2.998190" />
+      <inertia ixx="0.017219002" iyy="0.015004134" izz="0.0024472571" ixy="0" ixz="0" iyz="0" />
+    </inertial>
+    <visual>
+      <origin xyz="0 0 0" rpy="0 0 0" />
+      <geometry>
+        <mesh filename="../meshes/FLHIP.STL" />
+      </geometry>
+      <material name="auto_mat_5821239353059741668">
+        <color rgba="0.698039215686274 0.698039215686274 0.698039215686274 1" />
+      </material>
+    </visual>
+    <collision name="FLHIP_collision">
+      <origin xyz="0 0 0" rpy="0 0 0" />
+      <geometry>
+        <sphere radius="0.055" />
+      </geometry>
+    </collision>
+    <collision name="FL_thigh_collision_cylinder">
+      <origin xyz="-0.0832956939 0.062625 -0.147682729" rpy="-2.74052614 -0.478936851 1.75306341" />
+      <geometry>
+        <cylinder radius="0.034" length="0.36149828" />
+      </geometry>
+    </collision>
+    <collision name="FL_thigh_collision_sphere_1">
+      <origin xyz="0 0 0" rpy="0 0 0" />
+      <geometry>
+        <sphere radius="0.034" />
+      </geometry>
+    </collision>
+    <collision name="FL_thigh_collision_sphere_2">
+      <origin xyz="-0.166591388 0.12525 -0.295365457" rpy="0 0 0" />
+      <geometry>
+        <sphere radius="0.034" />
+      </geometry>
+    </collision>
+  </link>
+  <joint name="FL_thigh_joint" type="revolute">
+    <origin xyz="0.0898732742 0.007 -0.00273082804" rpy="0 0 0" />
+    <parent link="FL_hip" />
+    <child link="FL_thigh" />
+    <axis xyz="0 1 0" />
+    <limit lower="-1.68" upper="1.68" effort="90" velocity="18.85" />
+    <dynamics damping="0.6" friction="0.1" />
+  </joint>
+  <link name="FL_calf">
+    <inertial>
+      <origin xyz="0.0641159 0.00735397 -0.0922189" rpy="-0.550860476 6.292821e-05 1.57100287" />
+      <mass value="1.762735" />
+      <inertia ixx="0.015883495" iyy="0.015648787" izz="0.00040053036" ixy="0" ixz="0" iyz="0" />
+    </inertial>
+    <visual>
+      <origin xyz="0 0 0" rpy="0 0 0" />
+      <geometry>
+        <mesh filename="../meshes/FLKNEE.STL" />
+      </geometry>
+      <material name="auto_mat_5821239353059741668">
+        <color rgba="0.698039215686274 0.698039215686274 0.698039215686274 1" />
+      </material>
+    </visual>
+    <collision name="FL_shank_collision_cylinder">
+      <origin xyz="0.082295 0.002875 -0.149915" rpy="-3.12241747 0.501954858 -3.06683413" />
+      <geometry>
+        <cylinder radius="0.034" length="0.342083264" />
+      </geometry>
+    </collision>
+    <collision name="FL_shank_collision_sphere_1">
+      <origin xyz="0 0 0" rpy="0 0 0" />
+      <geometry>
+        <sphere radius="0.034" />
+      </geometry>
+    </collision>
+    <collision name="FL_shank_collision_sphere_2">
+      <origin xyz="0.16459 0.00575 -0.29983" rpy="0 0 0" />
+      <geometry>
+        <sphere radius="0.034" />
+      </geometry>
+    </collision>
+  </link>
+  <joint name="FL_calf_joint" type="revolute">
+    <origin xyz="-0.166591388 0.12525 -0.295365457" rpy="0 0 0" />
+    <parent link="FL_thigh" />
+    <child link="FL_calf" />
+    <axis xyz="0 -1 0" />
+    <limit lower="0" upper="1.56" effort="90" velocity="18.85" />
+    <dynamics damping="0.6" friction="0.1" />
+  </joint>
+  <link name="FL_foot">
+    <inertial>
+      <origin xyz="0 0 0" rpy="0 0 0" />
+      <mass value="0.001000" />
+      <inertia ixx="1e-06" iyy="1e-06" izz="1e-06" ixy="0" ixz="0" iyz="0" />
+    </inertial>
+    <visual>
+      <origin xyz="0 0 0" rpy="0 0 0" />
+      <geometry>
+        <mesh filename="../meshes/FLfoot.STL" />
+      </geometry>
+      <material name="auto_mat_5433279214290689598">
+        <color rgba="0.298039215686275 0.298039215686275 0.298039215686275 1" />
+      </material>
+    </visual>
+    <collision name="FL_foot_collision">
+      <origin xyz="0 0 0" rpy="0 0 0" />
+      <geometry>
+        <sphere radius="0.04" />
+      </geometry>
+    </collision>
+  </link>
+  <joint name="FL_calf_to_FL_foot_fixed" type="fixed">
+    <origin xyz="0.16459 0.00575 -0.29983" rpy="0 0 0" />
+    <parent link="FL_calf" />
+    <child link="FL_foot" />
+  </joint>
+  <link name="RR_hip">
+    <inertial>
+      <origin xyz="-0.0422658 0.0029172 0.00194417" rpy="0.00175072737 -0.00899899735 1.57218237" />
+      <mass value="2.067944" />
+      <inertia ixx="0.0058444196" iyy="0.0049622674" izz="0.0043976502" ixy="0" ixz="0" iyz="0" />
+    </inertial>
+    <visual>
+      <origin xyz="0 0 0" rpy="0 0 0" />
+      <geometry>
+        <mesh filename="../meshes/RRABAD.STL" />
+      </geometry>
+      <material name="auto_mat_3496808709860041112">
+        <color rgba="0.792156862745098 0.819607843137255 0.933333333333333 1" />
+      </material>
+    </visual>
+    <collision name="RRABAD_collision">
+      <origin xyz="-0.035 0 0" rpy="0 0 0" />
+      <geometry>
+        <sphere radius="0.055" />
+      </geometry>
+    </collision>
+  </link>
+  <joint name="RR_hip_joint" type="revolute">
+    <origin xyz="-0.3925 -0.103268106 0.0745115989" rpy="0 0 0" />
+    <parent link="trunk" />
+    <child link="RR_hip" />
+    <axis xyz="-1 0 0" />
+    <limit lower="-0.79" upper="0.79" effort="90" velocity="18.85" />
+    <dynamics damping="0.6" friction="0.1" />
+  </joint>
+  <link name="RR_thigh">
+    <inertial>
+      <origin xyz="-0.0367528 -0.0746596 -0.0637499" rpy="0.53772725 0.000301070581 1.56931069" />
+      <mass value="3.028219" />
+      <inertia ixx="0.016585228" iyy="0.014456513" izz="0.0023543832" ixy="0" ixz="0" iyz="0" />
+    </inertial>
+    <visual>
+      <origin xyz="0 0 0" rpy="0 0 0" />
+      <geometry>
+        <mesh filename="../meshes/RRHIP.STL" />
+      </geometry>
+      <material name="auto_mat_3496808709860041112">
+        <color rgba="0.792156862745098 0.819607843137255 0.933333333333333 1" />
+      </material>
+    </visual>
+    <collision name="RRHIP_collision">
+      <origin xyz="0 0 0" rpy="0 0 0" />
+      <geometry>
+        <sphere radius="0.055" />
+      </geometry>
+    </collision>
+    <collision name="RR_thigh_collision_cylinder">
+      <origin xyz="-0.0869669899 -0.062625 -0.146832277" rpy="2.73844622 -0.498845918 -1.78940138" />
+      <geometry>
+        <cylinder radius="0.034" length="0.363564936" />
+      </geometry>
+    </collision>
+    <collision name="RR_thigh_collision_sphere_1">
+      <origin xyz="0 0 0" rpy="0 0 0" />
+      <geometry>
+        <sphere radius="0.034" />
+      </geometry>
+    </collision>
+    <collision name="RR_thigh_collision_sphere_2">
+      <origin xyz="-0.17393398 -0.12525 -0.293664555" rpy="0 0 0" />
+      <geometry>
+        <sphere radius="0.034" />
+      </geometry>
+    </collision>
+  </link>
+  <joint name="RR_thigh_joint" type="revolute">
+    <origin xyz="-0.0897841337 -0.00373189417 0.0012287952" rpy="0 0 0" />
+    <parent link="RR_hip" />
+    <child link="RR_thigh" />
+    <axis xyz="0 -1 0" />
+    <limit lower="-1.68" upper="1.68" effort="90" velocity="18.85" />
+    <dynamics damping="0.6" friction="0.1" />
+  </joint>
+  <link name="RR_calf">
+    <inertial>
+      <origin xyz="0.0641159 -0.00782065 -0.0922189" rpy="-0.550860476 6.292821e-05 1.57100287" />
+      <mass value="1.752837" />
+      <inertia ixx="0.015794356" iyy="0.015560966" izz="0.00039828256" ixy="0" ixz="0" iyz="0" />
+    </inertial>
+    <visual>
+      <origin xyz="0 0 0" rpy="0 0 0" />
+      <geometry>
+        <mesh filename="../meshes/RRKNEE.STL" />
+      </geometry>
+      <material name="auto_mat_5821239353059741668">
+        <color rgba="0.698039215686274 0.698039215686274 0.698039215686274 1" />
+      </material>
+    </visual>
+    <collision name="RR_shank_collision_cylinder">
+      <origin xyz="0.082295 -0.002875 -0.149915" rpy="3.12241747 0.501954858 3.06683413" />
+      <geometry>
+        <cylinder radius="0.034" length="0.342083264" />
+      </geometry>
+    </collision>
+    <collision name="RR_shank_collision_sphere_1">
+      <origin xyz="0 0 0" rpy="0 0 0" />
+      <geometry>
+        <sphere radius="0.034" />
+      </geometry>
+    </collision>
+    <collision name="RR_shank_collision_sphere_2">
+      <origin xyz="0.16459 -0.00575 -0.29983" rpy="0 0 0" />
+      <geometry>
+        <sphere radius="0.034" />
+      </geometry>
+    </collision>
+  </link>
+  <joint name="RR_calf_joint" type="revolute">
+    <origin xyz="-0.17393398 -0.12525 -0.293664555" rpy="0 0 0" />
+    <parent link="RR_thigh" />
+    <child link="RR_calf" />
+    <axis xyz="0 1 0" />
+    <limit lower="-1.56" upper="0" effort="90" velocity="18.85" />
+    <dynamics damping="0.6" friction="0.1" />
+  </joint>
+  <link name="RR_foot">
+    <inertial>
+      <origin xyz="0 0 0" rpy="0 0 0" />
+      <mass value="0.001000" />
+      <inertia ixx="1e-06" iyy="1e-06" izz="1e-06" ixy="0" ixz="0" iyz="0" />
+    </inertial>
+    <visual>
+      <origin xyz="0 0 0" rpy="0 0 0" />
+      <geometry>
+        <mesh filename="../meshes/RRFoot.STL" />
+      </geometry>
+      <material name="auto_mat_5433279214290689598">
+        <color rgba="0.298039215686275 0.298039215686275 0.298039215686275 1" />
+      </material>
+    </visual>
+    <collision name="RR_foot_collision">
+      <origin xyz="0 0 0" rpy="0 0 0" />
+      <geometry>
+        <sphere radius="0.04" />
+      </geometry>
+    </collision>
+  </link>
+  <joint name="RR_calf_to_RR_foot_fixed" type="fixed">
+    <origin xyz="0.16459 -0.00575 -0.29983" rpy="0 0 0" />
+    <parent link="RR_calf" />
+    <child link="RR_foot" />
+  </joint>
+  <link name="RL_hip">
+    <inertial>
+      <origin xyz="-0.0422658 -0.000227935 0.00350336" rpy="0.0013271843 0.0001574503 1.57104924" />
+      <mass value="2.068009" />
+      <inertia ixx="0.0058223222" iyy="0.004962424" izz="0.0044200709" ixy="0" ixz="0" iyz="0" />
+    </inertial>
+    <visual>
+      <origin xyz="0 0 0" rpy="0 0 0" />
+      <geometry>
+        <mesh filename="../meshes/RLABAD.STL" />
+      </geometry>
+      <material name="auto_mat_3496808709860041112">
+        <color rgba="0.792156862745098 0.819607843137255 0.933333333333333 1" />
+      </material>
+    </visual>
+    <collision name="RLABAD_collision">
+      <origin xyz="-0.035 0 0" rpy="0 0 0" />
+      <geometry>
+        <sphere radius="0.055" />
+      </geometry>
+    </collision>
+  </link>
+  <joint name="RL_hip_joint" type="revolute">
+    <origin xyz="-0.3925 0.1 0.0726247571" rpy="0 0 0" />
+    <parent link="trunk" />
+    <child link="RL_hip" />
+    <axis xyz="-1 0 0" />
+    <limit lower="-0.79" upper="0.79" effort="90" velocity="18.85" />
+    <dynamics damping="0.6" friction="0.1" />
+  </joint>
+  <link name="RL_thigh">
+    <inertial>
+      <origin xyz="-0.0406471 0.0746578 -0.0578909" rpy="0.544335418 -0.000913020889 1.57177978" />
+      <mass value="3.028122" />
+      <inertia ixx="0.016587999" iyy="0.014431562" izz="0.0023810791" ixy="0" ixz="0" iyz="0" />
+    </inertial>
+    <visual>
+      <origin xyz="0 0 0" rpy="0 0 0" />
+      <geometry>
+        <mesh filename="../meshes/RLHIP.STL" />
+      </geometry>
+      <material name="auto_mat_3496808709860041112">
+        <color rgba="0.792156862745098 0.819607843137255 0.933333333333333 1" />
+      </material>
+    </visual>
+    <collision name="RLHIP_collision">
+      <origin xyz="0 0 0" rpy="0 0 0" />
+      <geometry>
+        <sphere radius="0.055" />
+      </geometry>
+    </collision>
+    <collision name="RL_thigh_collision_cylinder">
+      <origin xyz="-0.0858752271 0.062625 -0.145437017" rpy="-2.73498937 -0.496929727 1.77690043" />
+      <geometry>
+        <cylinder radius="0.034" length="0.360268628" />
+      </geometry>
+    </collision>
+    <collision name="RL_thigh_collision_sphere_1">
+      <origin xyz="0 0 0" rpy="0 0 0" />
+      <geometry>
+        <sphere radius="0.034" />
+      </geometry>
+    </collision>
+    <collision name="RL_thigh_collision_sphere_2">
+      <origin xyz="-0.171750454 0.12525 -0.290874034" rpy="0 0 0" />
+      <geometry>
+        <sphere radius="0.034" />
+      </geometry>
+    </collision>
+  </link>
+  <joint name="RL_thigh_joint" type="revolute">
+    <origin xyz="-0.0938380476 0.007 0.000703396403" rpy="0 0 0" />
+    <parent link="RL_hip" />
+    <child link="RL_thigh" />
+    <axis xyz="0 1 0" />
+    <limit lower="-1.68" upper="1.68" effort="90" velocity="18.85" />
+    <dynamics damping="0.6" friction="0.1" />
+  </joint>
+  <link name="RL_calf">
+    <inertial>
+      <origin xyz="0.0641159 0.00735397 -0.0922189" rpy="-0.550860476 6.292821e-05 1.57100287" />
+      <mass value="1.752869" />
+      <inertia ixx="0.015794645" iyy="0.015561251" izz="0.00039828986" ixy="0" ixz="0" iyz="0" />
+    </inertial>
+    <visual>
+      <origin xyz="0 0 0" rpy="0 0 0" />
+      <geometry>
+        <mesh filename="../meshes/RLKNEE.STL" />
+      </geometry>
+      <material name="auto_mat_8766753002416677076">
+        <color rgba="0.529411764705882 0.549019607843137 0.549019607843137 1" />
+      </material>
+    </visual>
+    <collision name="RL_shank_collision_cylinder">
+      <origin xyz="0.082295 0.002875 -0.149915" rpy="-3.12241747 0.501954858 -3.06683413" />
+      <geometry>
+        <cylinder radius="0.034" length="0.342083264" />
+      </geometry>
+    </collision>
+    <collision name="RL_shank_collision_sphere_1">
+      <origin xyz="0 0 0" rpy="0 0 0" />
+      <geometry>
+        <sphere radius="0.034" />
+      </geometry>
+    </collision>
+    <collision name="RL_shank_collision_sphere_2">
+      <origin xyz="0.16459 0.00575 -0.29983" rpy="0 0 0" />
+      <geometry>
+        <sphere radius="0.034" />
+      </geometry>
+    </collision>
+  </link>
+  <joint name="RL_calf_joint" type="revolute">
+    <origin xyz="-0.171750454 0.12525 -0.290874034" rpy="0 0 0" />
+    <parent link="RL_thigh" />
+    <child link="RL_calf" />
+    <axis xyz="0 -1 0" />
+    <limit lower="0" upper="1.56" effort="90" velocity="18.85" />
+    <dynamics damping="0.6" friction="0.1" />
+  </joint>
+  <link name="RL_foot">
+    <inertial>
+      <origin xyz="0 0 0" rpy="0 0 0" />
+      <mass value="0.001000" />
+      <inertia ixx="1e-06" iyy="1e-06" izz="1e-06" ixy="0" ixz="0" iyz="0" />
+    </inertial>
+    <visual>
+      <origin xyz="0 0 0" rpy="0 0 0" />
+      <geometry>
+        <mesh filename="../meshes/RLfoot.STL" />
+      </geometry>
+      <material name="auto_mat_5433279214290689598">
+        <color rgba="0.298039215686275 0.298039215686275 0.298039215686275 1" />
+      </material>
+    </visual>
+    <collision name="RL_foot_collision">
+      <origin xyz="0 0 0" rpy="0 0 0" />
+      <geometry>
+        <sphere radius="0.04" />
+      </geometry>
+    </collision>
+  </link>
+  <joint name="RL_calf_to_RL_foot_fixed" type="fixed">
+    <origin xyz="0.16459 0.00575 -0.29983" rpy="0 0 0" />
+    <parent link="RL_calf" />
+    <child link="RL_foot" />
+  </joint>
+</robot>
