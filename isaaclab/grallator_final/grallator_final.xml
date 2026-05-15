@@ -1,0 +1,219 @@
+<?xml version='1.0' encoding='utf-8'?>
+<mujoco model="grallator_v43_from_urdf">
+  <compiler angle="radian" autolimits="true" meshdir="meshes" />
+  <visual>
+    <headlight ambient="0.25 0.25 0.25" diffuse="0.45 0.45 0.45" specular="0.05 0.05 0.05" />
+    <map fogstart="8" fogend="25" force="0.1" znear="0.01" />
+    <rgba haze="0.10 0.15 0.20 1" />
+  </visual>
+  <option timestep="0.001" gravity="0 0 -9.81" integrator="RK4" solver="Newton" iterations="50" tolerance="1e-10" />
+  <default>
+    <joint damping="0.6" armature="0.01" limited="true" frictionloss="0.1" />
+    <geom friction="1.0 0.03 0.003" condim="3" margin="0.001" />
+    <motor ctrllimited="true" ctrlrange="-90 90" />
+  </default>
+  <asset>
+    <mesh name="base_link" file="base_link.STL" />
+    <mesh name="FRABAD" file="FRABAD.STL" />
+    <mesh name="FRHIP" file="FRHIP.STL" />
+    <mesh name="FRKNEE" file="FRKNEE.STL" />
+    <mesh name="FRFoot" file="FRFoot.STL" />
+    <mesh name="FLABAD" file="FLABAD.STL" />
+    <mesh name="FLHIP" file="FLHIP.STL" />
+    <mesh name="FLKNEE" file="FLKNEE.STL" />
+    <mesh name="FLfoot" file="FLfoot.STL" />
+    <mesh name="RRABAD" file="RRABAD.STL" />
+    <mesh name="RRHIP" file="RRHIP.STL" />
+    <mesh name="RRKNEE" file="RRKNEE.STL" />
+    <mesh name="RRFoot" file="RRFoot.STL" />
+    <mesh name="RLABAD" file="RLABAD.STL" />
+    <mesh name="RLHIP" file="RLHIP.STL" />
+    <mesh name="RLKNEE" file="RLKNEE.STL" />
+    <mesh name="RLfoot" file="RLfoot.STL" />
+    <texture name="grid" type="2d" builtin="checker" rgb1="0.18 0.18 0.18" rgb2="0.35 0.35 0.35" width="512" height="512" />
+    <material name="grid_mat" texture="grid" texrepeat="8 8" reflectance="0.15" />
+    <material name="floor_blue_mat" rgba="0.03 0.20 0.95 1" reflectance="0.15" />
+    <texture name="blue_checker" type="2d" builtin="checker" rgb1="0.22 0.45 0.68" rgb2="0.55 0.78 0.95" width="512" height="512" />
+    <material name="blue_checker_mat" texture="blue_checker" texrepeat="35 35" reflectance="0.12" />
+    <texture name="bright_blue_checker" type="2d" builtin="checker" rgb1="0.16 0.33 0.52" rgb2="0.42 0.66 0.86" width="512" height="512" />
+    <material name="bright_blue_checker_mat" texture="bright_blue_checker" texrepeat="45 45" reflectance="0.08" />
+    <texture name="default_blue_checker" type="2d" builtin="checker" rgb1="0.18 0.36 0.56" rgb2="0.43 0.67 0.88" width="512" height="512" />
+    <material name="default_blue_checker_mat" texture="default_blue_checker" texrepeat="38 38" reflectance="0.06" />
+  </asset>
+  <worldbody>
+    <camera name="track" mode="trackcom" pos="1.8 -2.0 1.1" xyaxes="0.73 0.68 0 -0.28 0.30 0.91" />
+    <geom name="floor" type="plane" size="12 12 0.05" material="default_blue_checker_mat" friction="1.5 0.05 0.005" condim="3" contype="1" conaffinity="1" />
+    <body name="base_link">
+      <freejoint name="base_freejoint" />
+      <inertial pos="0.05 0 0.03" mass="12.000000" diaginertia="0.056 0.531 0.563" />
+      <geom name="base_link_visual" type="mesh" mesh="base_link" contype="0" conaffinity="0" group="1" rgba="0.698039215686274 0.698039215686274 0.698039215686274 1" />
+      <body name="FRABAD" pos="0.3925 -0.1032681058 0.07828528243">
+        <inertial pos="0.0422658 0.0029172 -0.00194417" quat="0.707592 -0.00256001 0.00380236 0.706606" mass="2.068198" diaginertia="0.0058451364 0.004962876 0.0043981895" />
+        <joint name="FR_collar_joint" type="hinge" axis="1 0 0" range="-0.79 0.79" limited="true" />
+        <geom name="FRABAD_visual" type="mesh" mesh="FRABAD" contype="0" conaffinity="0" group="1" rgba="0.792156862745098 0.819607843137255 0.933333333333333 1" />
+        <body name="FRHIP" pos="0.0972158663 -0.003731894169 -0.002544888361">
+          <inertial pos="-0.0367727 -0.0746392 -0.0637936" quat="0.68223 0.187873 0.187794 0.681175" mass="3.028174" diaginertia="0.016592203 0.014462668 0.0023553611" />
+          <joint name="FR_hip_joint" type="hinge" axis="0 -1 0" range="-1.68 1.68" limited="true" />
+          <geom name="FRHIP_visual" type="mesh" mesh="FRHIP" contype="0" conaffinity="0" group="1" rgba="0.792156862745098 0.819607843137255 0.933333333333333 1" />
+          <body name="FRKNEE" pos="-0.1739339798 -0.12525 -0.293664555">
+            <inertial pos="0.0641115 -0.0078228 -0.0922608" quat="0.680378 -0.192307 -0.192304 0.680531" mass="1.752629" diaginertia="0.015809715 0.01557616 0.00039865176" />
+            <joint name="FR_knee_joint" type="hinge" axis="0 1 0" range="-1.56 0" limited="true" />
+            <geom name="FRKNEE_visual" type="mesh" mesh="FRKNEE" contype="0" conaffinity="0" group="1" rgba="0.698039215686274 0.698039215686274 0.698039215686274 1" />
+            <body name="FRFoot" pos="0.16459 -0.00575 -0.29983">
+              <inertial pos="0 0 0" mass="0.001000" diaginertia="0.000001 0.000001 0.000001" />
+              <geom name="FRFoot_visual" type="mesh" mesh="FRFoot" contype="0" conaffinity="0" group="1" rgba="0.298039215686275 0.298039215686275 0.298039215686275 1" />
+              <geom type="sphere" size="0.040" pos="0 0 0" priority="1" solimp="0.015 1 0.022" friction="1.3 0.03 0.01" rgba="1 0 0 0.45" contype="1" conaffinity="1" condim="6" margin="0.004" group="3" name="FRKNEE_foot_collision" />
+            </body>
+            <geom type="capsule" fromto="0 0 0 0.16459 -0.00575 -0.29983" size="0.034" friction="1.3 0.03 0.003" rgba="0 1 0 0" contype="1" conaffinity="1" condim="3" margin="0.004" group="3" name="FR_shank_collision" />
+          </body>
+          <geom type="sphere" size="0.055" pos="0 0 0" friction="1.3 0.03 0.003" rgba="0 1 0 0" contype="1" conaffinity="1" condim="3" margin="0.004" group="3" name="FRHIP_collision" />
+          <geom type="capsule" fromto="0 0 0 -0.1739339798 -0.12525 -0.293664555" size="0.034" friction="1.3 0.03 0.003" rgba="0 1 0 0" contype="1" conaffinity="1" condim="3" margin="0.004" group="3" name="FR_thigh_collision" />
+        </body>
+        <geom type="sphere" size="0.055" pos="0.035 0 0" friction="1.3 0.03 0.003" rgba="0 1 0 0" contype="1" conaffinity="1" condim="3" margin="0.004" group="3" name="FRABAD_collision" />
+      </body>
+      <body name="FLABAD" pos="0.3925 0.1 0.08017212421">
+        <inertial pos="0.0422658 -0.000227935 -0.00350336" quat="0.707196 0.000524945 0.000413495 0.707017" mass="2.088075" diaginertia="0.0058788153 0.0050105737 0.0044629583" />
+        <joint name="FL_collar_joint" type="hinge" axis="1 0 0" range="-0.79 0.79" limited="true" />
+        <geom name="FLABAD_visual" type="mesh" mesh="FLABAD" contype="0" conaffinity="0" group="1" rgba="0.792156862745098 0.819607843137255 0.933333333333333 1" />
+        <body name="FLHIP" pos="0.08987327421 0.007 -0.002730828037">
+          <inertial pos="-0.0337775 0.0725643 -0.0456768" quat="0.680631 0.190309 0.189859 0.681526" mass="2.998190" diaginertia="0.017219002 0.015004134 0.0024472571" />
+          <joint name="FL_hip_joint" type="hinge" axis="0 1 0" range="-1.68 1.68" limited="true" />
+          <geom name="FLHIP_visual" type="mesh" mesh="FLHIP" contype="0" conaffinity="0" group="1" rgba="0.698039215686274 0.698039215686274 0.698039215686274 1" />
+          <body name="FLKNEE" pos="-0.1665913877 0.12525 -0.2953654571">
+            <inertial pos="0.0641159 0.00735397 -0.0922189" quat="0.680378 -0.192307 -0.192304 0.680531" mass="1.762735" diaginertia="0.015883495 0.015648787 0.00040053036" />
+            <joint name="FL_knee_joint" type="hinge" axis="0 -1 0" range="0 1.56" limited="true" />
+            <geom name="FLKNEE_visual" type="mesh" mesh="FLKNEE" contype="0" conaffinity="0" group="1" rgba="0.698039215686274 0.698039215686274 0.698039215686274 1" />
+            <body name="FLfoot" pos="0.16459 0.00575 -0.29983">
+              <inertial pos="0 0 0" mass="0.001000" diaginertia="0.000001 0.000001 0.000001" />
+              <geom name="FLfoot_visual" type="mesh" mesh="FLfoot" contype="0" conaffinity="0" group="1" rgba="0.298039215686275 0.298039215686275 0.298039215686275 1" />
+              <geom type="sphere" size="0.040" pos="0 0 0" priority="1" solimp="0.015 1 0.022" friction="1.3 0.03 0.01" rgba="1 0 0 0.45" contype="1" conaffinity="1" condim="6" margin="0.004" group="3" name="FLKNEE_foot_collision" />
+            </body>
+            <geom type="capsule" fromto="0 0 0 0.16459 0.00575 -0.29983" size="0.034" friction="1.3 0.03 0.003" rgba="0 1 0 0" contype="1" conaffinity="1" condim="3" margin="0.004" group="3" name="FL_shank_collision" />
+          </body>
+          <geom type="sphere" size="0.055" pos="0 0 0" friction="1.3 0.03 0.003" rgba="0 1 0 0" contype="1" conaffinity="1" condim="3" margin="0.004" group="3" name="FLHIP_collision" />
+          <geom type="capsule" fromto="0 0 0 -0.1665913877 0.12525 -0.2953654571" size="0.034" friction="1.3 0.03 0.003" rgba="0 1 0 0" contype="1" conaffinity="1" condim="3" margin="0.004" group="3" name="FL_thigh_collision" />
+        </body>
+        <geom type="sphere" size="0.055" pos="0.035 0 0" friction="1.3 0.03 0.003" rgba="0 1 0 0" contype="1" conaffinity="1" condim="3" margin="0.004" group="3" name="FLABAD_collision" />
+      </body>
+      <body name="RRABAD" pos="-0.3925 -0.1032681058 0.07451159887">
+        <inertial pos="-0.0422658 0.0029172 0.00194417" quat="0.706606 0.00380236 -0.00256001 0.707592" mass="2.067944" diaginertia="0.0058444196 0.0049622674 0.0043976502" />
+        <joint name="BR_collar_joint" type="hinge" axis="-1 0 0" range="-0.79 0.79" limited="true" />
+        <geom name="RRABAD_visual" type="mesh" mesh="RRABAD" contype="0" conaffinity="0" group="1" rgba="0.792156862745098 0.819607843137255 0.933333333333333 1" />
+        <body name="RRHIP" pos="-0.0897841337 -0.003731894169 0.001228795201">
+          <inertial pos="-0.0367528 -0.0746596 -0.0637499" quat="0.682238 0.18787 0.187796 0.681168" mass="3.028219" diaginertia="0.016585228 0.014456513 0.0023543832" />
+          <joint name="BR_hip_joint" type="hinge" axis="0 -1 0" range="-1.68 1.68" limited="true" />
+          <geom name="RRHIP_visual" type="mesh" mesh="RRHIP" contype="0" conaffinity="0" group="1" rgba="0.792156862745098 0.819607843137255 0.933333333333333 1" />
+          <body name="RRKNEE" pos="-0.1739339798 -0.12525 -0.293664555">
+            <inertial pos="0.0641159 -0.00782065 -0.0922189" quat="0.680378 -0.192307 -0.192304 0.680531" mass="1.752837" diaginertia="0.015794356 0.015560966 0.00039828256" />
+            <joint name="BR_knee_joint" type="hinge" axis="0 1 0" range="-1.56 0" limited="true" />
+            <geom name="RRKNEE_visual" type="mesh" mesh="RRKNEE" contype="0" conaffinity="0" group="1" rgba="0.698039215686274 0.698039215686274 0.698039215686274 1" />
+            <body name="RRFoot" pos="0.16459 -0.00575 -0.29983">
+              <inertial pos="0 0 0" mass="0.001000" diaginertia="0.000001 0.000001 0.000001" />
+              <geom name="RRFoot_visual" type="mesh" mesh="RRFoot" contype="0" conaffinity="0" group="1" rgba="0.298039215686275 0.298039215686275 0.298039215686275 1" />
+              <geom type="sphere" size="0.040" pos="0 0 0" priority="1" solimp="0.015 1 0.022" friction="1.3 0.03 0.01" rgba="1 0 0 0.45" contype="1" conaffinity="1" condim="6" margin="0.004" group="3" name="RRKNEE_foot_collision" />
+            </body>
+            <geom type="capsule" fromto="0 0 0 0.16459 -0.00575 -0.29983" size="0.034" friction="1.3 0.03 0.003" rgba="0 1 0 0" contype="1" conaffinity="1" condim="3" margin="0.004" group="3" name="RR_shank_collision" />
+          </body>
+          <geom type="sphere" size="0.055" pos="0 0 0" friction="1.3 0.03 0.003" rgba="0 1 0 0" contype="1" conaffinity="1" condim="3" margin="0.004" group="3" name="RRHIP_collision" />
+          <geom type="capsule" fromto="0 0 0 -0.1739339798 -0.12525 -0.293664555" size="0.034" friction="1.3 0.03 0.003" rgba="0 1 0 0" contype="1" conaffinity="1" condim="3" margin="0.004" group="3" name="RR_thigh_collision" />
+        </body>
+        <geom type="sphere" size="0.055" pos="-0.035 0 0" friction="1.3 0.03 0.003" rgba="0 1 0 0" contype="1" conaffinity="1" condim="3" margin="0.004" group="3" name="RRABAD_collision" />
+      </body>
+      <body name="RLABAD" pos="-0.3925 0.1 0.07262475709">
+        <inertial pos="-0.0422658 -0.000227935 0.00350336" quat="0.707017 0.000413497 0.00052495 0.707196" mass="2.068009" diaginertia="0.0058223222 0.004962424 0.0044200709" />
+        <joint name="BL_collar_joint" type="hinge" axis="-1 0 0" range="-0.79 0.79" limited="true" />
+        <geom name="RLABAD_visual" type="mesh" mesh="RLABAD" contype="0" conaffinity="0" group="1" rgba="0.792156862745098 0.819607843137255 0.933333333333333 1" />
+        <body name="RLHIP" pos="-0.0938380476 0.007 0.0007033964032">
+          <inertial pos="-0.0406471 0.0746578 -0.0578909" quat="0.680657 0.190302 0.189867 0.6815" mass="3.028122" diaginertia="0.016587999 0.014431562 0.0023810791" />
+          <joint name="BL_hip_joint" type="hinge" axis="0 1 0" range="-1.68 1.68" limited="true" />
+          <geom name="RLHIP_visual" type="mesh" mesh="RLHIP" contype="0" conaffinity="0" group="1" rgba="0.792156862745098 0.819607843137255 0.933333333333333 1" />
+          <body name="RLKNEE" pos="-0.1717504543 0.12525 -0.2908740339">
+            <inertial pos="0.0641159 0.00735397 -0.0922189" quat="0.680378 -0.192307 -0.192304 0.680531" mass="1.752869" diaginertia="0.015794645 0.015561251 0.00039828986" />
+            <joint name="BL_knee_joint" type="hinge" axis="0 -1 0" range="0 1.56" limited="true" />
+            <geom name="RLKNEE_visual" type="mesh" mesh="RLKNEE" contype="0" conaffinity="0" group="1" rgba="0.529411764705882 0.549019607843137 0.549019607843137 1" />
+            <body name="RLfoot" pos="0.16459 0.00575 -0.29983">
+              <inertial pos="0 0 0" mass="0.001000" diaginertia="0.000001 0.000001 0.000001" />
+              <geom name="RLfoot_visual" type="mesh" mesh="RLfoot" contype="0" conaffinity="0" group="1" rgba="0.298039215686275 0.298039215686275 0.298039215686275 1" />
+              <geom type="sphere" size="0.040" pos="0 0 0" priority="1" solimp="0.015 1 0.022" friction="1.3 0.03 0.01" rgba="1 0 0 0.45" contype="1" conaffinity="1" condim="6" margin="0.004" group="3" name="RLKNEE_foot_collision" />
+            </body>
+            <geom type="capsule" fromto="0 0 0 0.16459 0.00575 -0.29983" size="0.034" friction="1.3 0.03 0.003" rgba="0 1 0 0" contype="1" conaffinity="1" condim="3" margin="0.004" group="3" name="RL_shank_collision" />
+          </body>
+          <geom type="sphere" size="0.055" pos="0 0 0" friction="1.3 0.03 0.003" rgba="0 1 0 0" contype="1" conaffinity="1" condim="3" margin="0.004" group="3" name="RLHIP_collision" />
+          <geom type="capsule" fromto="0 0 0 -0.1717504543 0.12525 -0.2908740339" size="0.034" friction="1.3 0.03 0.003" rgba="0 1 0 0" contype="1" conaffinity="1" condim="3" margin="0.004" group="3" name="RL_thigh_collision" />
+        </body>
+        <geom type="sphere" size="0.055" pos="-0.035 0 0" friction="1.3 0.03 0.003" rgba="0 1 0 0" contype="1" conaffinity="1" condim="3" margin="0.004" group="3" name="RLABAD_collision" />
+      </body>
+      <geom type="box" size="0.36 0.105 0.055" pos="-0.035 0 0" friction="1.3 0.03 0.003" rgba="0 1 0 0" contype="1" conaffinity="1" condim="3" margin="0.004" group="3" name="base_collision" />
+      <geom type="box" size="0.050 0.035 0.025" pos="0.240 0.000 0.090" friction="1.3 0.03 0.003" rgba="0 1 0 0" contype="1" conaffinity="1" condim="3" margin="0.004" group="3" name="top_sensor_collision" />
+      <site name="xsens_mti630_site" pos="0.05 0 0.08" size="0.018" rgba="1 0 0 1" />
+    </body>
+    <light name="main_light" pos="0 0 4" dir="0 0 -1" directional="true" diffuse="0.55 0.55 0.55" ambient="0.25 0.25 0.25" specular="0.08 0.08 0.08" />
+  </worldbody>
+  <contact>
+    <exclude name="adjacent_exclude_00" body1="base_link" body2="FRABAD" />
+    <exclude name="adjacent_exclude_01" body1="FRABAD" body2="FRHIP" />
+    <exclude name="adjacent_exclude_02" body1="FRHIP" body2="FRKNEE" />
+    <exclude name="adjacent_exclude_03" body1="FRKNEE" body2="FRFoot" />
+    <exclude name="adjacent_exclude_04" body1="base_link" body2="FLABAD" />
+    <exclude name="adjacent_exclude_05" body1="FLABAD" body2="FLHIP" />
+    <exclude name="adjacent_exclude_06" body1="FLHIP" body2="FLKNEE" />
+    <exclude name="adjacent_exclude_07" body1="FLKNEE" body2="FLfoot" />
+    <exclude name="adjacent_exclude_08" body1="base_link" body2="RRABAD" />
+    <exclude name="adjacent_exclude_09" body1="RRABAD" body2="RRHIP" />
+    <exclude name="adjacent_exclude_10" body1="RRHIP" body2="RRKNEE" />
+    <exclude name="adjacent_exclude_11" body1="RRKNEE" body2="RRFoot" />
+    <exclude name="adjacent_exclude_12" body1="base_link" body2="RLABAD" />
+    <exclude name="adjacent_exclude_13" body1="RLABAD" body2="RLHIP" />
+    <exclude name="adjacent_exclude_14" body1="RLHIP" body2="RLKNEE" />
+    <exclude name="adjacent_exclude_15" body1="RLKNEE" body2="RLfoot" />
+  </contact>
+  <actuator>
+    <motor name="FR_collar_joint" joint="FR_collar_joint" gear="1" ctrllimited="true" ctrlrange="-90 90" />
+    <motor name="FR_hip_joint" joint="FR_hip_joint" gear="1" ctrllimited="true" ctrlrange="-90 90" />
+    <motor name="FR_knee_joint" joint="FR_knee_joint" gear="1" ctrllimited="true" ctrlrange="-90 90" />
+    <motor name="FL_collar_joint" joint="FL_collar_joint" gear="1" ctrllimited="true" ctrlrange="-90 90" />
+    <motor name="FL_hip_joint" joint="FL_hip_joint" gear="1" ctrllimited="true" ctrlrange="-90 90" />
+    <motor name="FL_knee_joint" joint="FL_knee_joint" gear="1" ctrllimited="true" ctrlrange="-90 90" />
+    <motor name="BR_collar_joint" joint="BR_collar_joint" gear="1" ctrllimited="true" ctrlrange="-90 90" />
+    <motor name="BR_hip_joint" joint="BR_hip_joint" gear="1" ctrllimited="true" ctrlrange="-90 90" />
+    <motor name="BR_knee_joint" joint="BR_knee_joint" gear="1" ctrllimited="true" ctrlrange="-90 90" />
+    <motor name="BL_collar_joint" joint="BL_collar_joint" gear="1" ctrllimited="true" ctrlrange="-90 90" />
+    <motor name="BL_hip_joint" joint="BL_hip_joint" gear="1" ctrllimited="true" ctrlrange="-90 90" />
+    <motor name="BL_knee_joint" joint="BL_knee_joint" gear="1" ctrllimited="true" ctrlrange="-90 90" />
+  </actuator>
+  <sensor>
+    <jointpos joint="FL_collar_joint" name="abduction_front_left_pos" />
+    <jointpos joint="FL_hip_joint" name="hip_front_left_pos" />
+    <jointpos joint="FL_knee_joint" name="knee_front_left_pos" />
+    <jointpos joint="BL_collar_joint" name="abduction_hind_left_pos" />
+    <jointpos joint="BL_hip_joint" name="hip_hind_left_pos" />
+    <jointpos joint="BL_knee_joint" name="knee_hind_left_pos" />
+    <jointpos joint="FR_collar_joint" name="abduction_front_right_pos" />
+    <jointpos joint="FR_hip_joint" name="hip_front_right_pos" />
+    <jointpos joint="FR_knee_joint" name="knee_front_right_pos" />
+    <jointpos joint="BR_collar_joint" name="abduction_hind_right_pos" />
+    <jointpos joint="BR_hip_joint" name="hip_hind_right_pos" />
+    <jointpos joint="BR_knee_joint" name="knee_hind_right_pos" />
+    <jointvel joint="FL_collar_joint" name="abduction_front_left_vel" />
+    <jointvel joint="FL_hip_joint" name="hip_front_left_vel" />
+    <jointvel joint="FL_knee_joint" name="knee_front_left_vel" />
+    <jointvel joint="BL_collar_joint" name="abduction_hind_left_vel" />
+    <jointvel joint="BL_hip_joint" name="hip_hind_left_vel" />
+    <jointvel joint="BL_knee_joint" name="knee_hind_left_vel" />
+    <jointvel joint="FR_collar_joint" name="abduction_front_right_vel" />
+    <jointvel joint="FR_hip_joint" name="hip_front_right_vel" />
+    <jointvel joint="FR_knee_joint" name="knee_front_right_vel" />
+    <jointvel joint="BR_collar_joint" name="abduction_hind_right_vel" />
+    <jointvel joint="BR_hip_joint" name="hip_hind_right_vel" />
+    <jointvel joint="BR_knee_joint" name="knee_hind_right_vel" />
+    <gyro site="xsens_mti630_site" name="xsens_mti630_gyro" />
+    <accelerometer site="xsens_mti630_site" name="xsens_mti630_accelerometer" />
+    <framequat objtype="site" objname="xsens_mti630_site" name="xsens_mti630_orientation" />
+    <framepos objtype="site" objname="xsens_mti630_site" name="xsens_mti630_global_position" />
+    <framelinvel objtype="site" objname="xsens_mti630_site" name="xsens_mti630_global_linvel" />
+    <frameangvel objtype="site" objname="xsens_mti630_site" name="xsens_mti630_global_angvel" />
+  </sensor>
+  <keyframe>
+    <key name="STANDBY" qpos="0.000000 0.000000 0.199411 1.000000 0.000000 0.000000 0.000000 0.000000 -0.690000 -1.400000 0.000000 0.690000 1.400000 0.000000 -0.690000 -1.400000 0.000000 0.690000 1.400000" ctrl="0 0 0 0 0 0 0 0 0 0 0 0" />
+  </keyframe>
+</mujoco>
