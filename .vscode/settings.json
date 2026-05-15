@@ -1,5 +1,4 @@
 {
     "workbench.startupEditor": "readme",
-    "simpleBrowser.focusLockIndicator.enabled": false,
-    "ROS2.distro": "humble"
+    "simpleBrowser.focusLockIndicator.enabled": false
 }
