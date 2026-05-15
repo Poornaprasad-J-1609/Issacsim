@@ -12,13 +12,19 @@ class GrallatorFlatEnvCfg(GrallatorRoughEnvCfg):
         self.scene.terrain.terrain_type = "plane"
         self.scene.terrain.terrain_generator = None
         self.scene.height_scanner = None
+        self.scene.contact_forces = None
         self.observations.policy.height_scan = None
         self.curriculum.terrain_levels = None
+
+        # Disable contact-dependent terms for first spawn test.
+        self.rewards.feet_air_time = None
+        self.rewards.undesired_contacts = None
+        self.terminations.base_contact = None
 
 
         # Reward tuning for stable first walking.
         self.rewards.flat_orientation_l2.weight = -2.5
-        self.rewards.feet_air_time.weight = 0.25
+        # feet_air_time disabled for first spawn test
 
 
 

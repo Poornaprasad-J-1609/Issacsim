@@ -1,4 +1,6 @@
 from isaaclab.utils import configclass
+import isaaclab.envs.mdp as mdp
+from isaaclab.managers import SceneEntityCfg, TerminationTermCfg as DoneTerm, RewardTermCfg as RewTerm
 
 from isaaclab_tasks.manager_based.locomotion.velocity.velocity_env_cfg import LocomotionVelocityRoughEnvCfg
 
@@ -55,7 +57,24 @@ class GrallatorRoughEnvCfg(LocomotionVelocityRoughEnvCfg):
         # Rewards: feet are cleanly named FR_foot, FL_foot, RR_foot, RL_foot.
         self.rewards.feet_air_time.params["sensor_cfg"].body_names = ".*_foot"
         self.rewards.feet_air_time.weight = 0.05
-        self.rewards.undesired_contacts = None
+        # Penalize trunk/hip/thigh/calf ground contact.
+        # This discourages crawling, belly sliding, and calf/knee walking.
+        self.rewards.undesired_contacts = RewTerm(
+            func=mdp.undesired_contacts,
+            weight=-5.0,
+            params={
+                "sensor_cfg": SceneEntityCfg(
+                    "contact_forces",
+                    body_names=[
+                        "trunk",
+                        ".*_hip",
+                        ".*_thigh",
+                        ".*_calf",
+                    ],
+                ),
+                "threshold": 0.02,
+            },
+        )
         self.rewards.dof_torques_l2.weight = -0.0002
         self.rewards.track_lin_vel_xy_exp.weight = 1.5
         self.rewards.track_ang_vel_z_exp.weight = 0.3
@@ -72,6 +91,26 @@ class GrallatorRoughEnvCfg(LocomotionVelocityRoughEnvCfg):
             ".*_thigh",
             ".*_calf",
         ]
+        self.terminations.base_contact.params["threshold"] = 0.05
+
+        # Extra anti-crawling / anti-lying-down terminations.
+        # If the trunk/root goes too low, terminate.
+        self.terminations.base_height = DoneTerm(
+            func=mdp.root_height_below_minimum,
+            params={
+                "minimum_height": 0.35,
+                "asset_cfg": SceneEntityCfg("robot"),
+            },
+        )
+
+        # If the body tilts too much, terminate.
+        self.terminations.bad_orientation = DoneTerm(
+            func=mdp.bad_orientation,
+            params={
+                "limit_angle": 0.8,
+                "asset_cfg": SceneEntityCfg("robot"),
+            },
+        )
 
 
 @configclass

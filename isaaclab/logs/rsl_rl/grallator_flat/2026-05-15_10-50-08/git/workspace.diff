@@ -1,0 +1,208 @@
+--- git status ---
+On branch main
+Your branch is up to date with 'origin/main'.
+
+Changes not staged for commit:
+  (use "git add <file>..." to update what will be committed)
+  (use "git restore <file>..." to discard changes in working directory)
+	modified:   isaaclab/grallator_quadruped_isaac/grallator/__pycache__/__init__.cpython-311.pyc
+	modified:   isaaclab/grallator_quadruped_isaac/grallator/grallator.py
+	modified:   isaaclab/source/isaaclab_tasks/isaaclab_tasks/manager_based/locomotion/velocity/config/grallator/__pycache__/flat_env_cfg.cpython-311.pyc
+	modified:   isaaclab/source/isaaclab_tasks/isaaclab_tasks/manager_based/locomotion/velocity/config/grallator/__pycache__/grallator.cpython-311.pyc
+	modified:   isaaclab/source/isaaclab_tasks/isaaclab_tasks/manager_based/locomotion/velocity/config/grallator/agents/__pycache__/rsl_rl_ppo_cfg.cpython-311.pyc
+	modified:   isaaclab/source/isaaclab_tasks/isaaclab_tasks/manager_based/locomotion/velocity/config/grallator/agents/rsl_rl_ppo_cfg.py
+	modified:   isaaclab/source/isaaclab_tasks/isaaclab_tasks/manager_based/locomotion/velocity/config/grallator/flat_env_cfg.py
+	modified:   isaaclab/source/isaaclab_tasks/isaaclab_tasks/manager_based/locomotion/velocity/config/grallator/grallator.py
+
+Untracked files:
+  (use "git add <file>..." to include in what will be committed)
+	isaaclab/grallator_final/grallator_final/
+	isaaclab/grallator_final/urdf/grallator_isaac_lab/
+	isaaclab/grallator_quadruped_isaac/grallator/assets/__init__.py
+	isaaclab/grallator_quadruped_isaac/grallator/assets/__pycache__/
+	isaaclab/grallator_quadruped_isaac/grallator/assets/grallator_cfg.py
+	isaaclab/grallator_quadruped_isaac/usd/grallator_final.usd
+	isaaclab/logs/rsl_rl/grallator_flat/2026-05-15_10-45-35/
+	isaaclab/logs/rsl_rl/grallator_flat/2026-05-15_10-46-17/
+	isaaclab/logs/rsl_rl/grallator_flat/2026-05-15_10-50-08/
+	isaaclab/outputs/2026-05-15/
+	isaaclab/test_grallator_crouch_to_stand_pd.py
+	isaaclab/test_grallator_crouch_to_stand_pd_WORKING.py
+	isaaclab/test_grallator_joint_mapping.py
+	isaaclab/test_grallator_rl_env_spawn.py
+	isaaclab/test_grallator_usd_load.py
+
+no changes added to commit (use "git add" and/or "git commit -a") 
+
+
+--- git diff ---
+diff --git a/isaaclab/grallator_quadruped_isaac/grallator/__pycache__/__init__.cpython-311.pyc b/isaaclab/grallator_quadruped_isaac/grallator/__pycache__/__init__.cpython-311.pyc
+index 246c009..3e987d2 100644
+Binary files a/isaaclab/grallator_quadruped_isaac/grallator/__pycache__/__init__.cpython-311.pyc and b/isaaclab/grallator_quadruped_isaac/grallator/__pycache__/__init__.cpython-311.pyc differ
+diff --git a/isaaclab/grallator_quadruped_isaac/grallator/grallator.py b/isaaclab/grallator_quadruped_isaac/grallator/grallator.py
+index ab8a358..d52c1d9 100644
+--- a/isaaclab/grallator_quadruped_isaac/grallator/grallator.py
++++ b/isaaclab/grallator_quadruped_isaac/grallator/grallator.py
+@@ -55,7 +55,7 @@ GRALLATOR_CFG = ArticulationCfg(
+     ),
+     init_state=ArticulationCfg.InitialStateCfg(
+         # Tune z after the Isaac Sim import test. If the body drops too far, increase it slightly.
+-        pos=(0.0, 0.0, 3.0),
++        pos=(0.0, 0.0, 0.69),
+         joint_pos=GRALLATOR_DEFAULT_JOINT_POS,
+         joint_vel={".*": 0.0},
+     ),
+diff --git a/isaaclab/source/isaaclab_tasks/isaaclab_tasks/manager_based/locomotion/velocity/config/grallator/__pycache__/flat_env_cfg.cpython-311.pyc b/isaaclab/source/isaaclab_tasks/isaaclab_tasks/manager_based/locomotion/velocity/config/grallator/__pycache__/flat_env_cfg.cpython-311.pyc
+index dae5ac4..f008e0f 100644
+Binary files a/isaaclab/source/isaaclab_tasks/isaaclab_tasks/manager_based/locomotion/velocity/config/grallator/__pycache__/flat_env_cfg.cpython-311.pyc and b/isaaclab/source/isaaclab_tasks/isaaclab_tasks/manager_based/locomotion/velocity/config/grallator/__pycache__/flat_env_cfg.cpython-311.pyc differ
+diff --git a/isaaclab/source/isaaclab_tasks/isaaclab_tasks/manager_based/locomotion/velocity/config/grallator/__pycache__/grallator.cpython-311.pyc b/isaaclab/source/isaaclab_tasks/isaaclab_tasks/manager_based/locomotion/velocity/config/grallator/__pycache__/grallator.cpython-311.pyc
+index 1acb968..d2e7a0a 100644
+Binary files a/isaaclab/source/isaaclab_tasks/isaaclab_tasks/manager_based/locomotion/velocity/config/grallator/__pycache__/grallator.cpython-311.pyc and b/isaaclab/source/isaaclab_tasks/isaaclab_tasks/manager_based/locomotion/velocity/config/grallator/__pycache__/grallator.cpython-311.pyc differ
+diff --git a/isaaclab/source/isaaclab_tasks/isaaclab_tasks/manager_based/locomotion/velocity/config/grallator/agents/__pycache__/rsl_rl_ppo_cfg.cpython-311.pyc b/isaaclab/source/isaaclab_tasks/isaaclab_tasks/manager_based/locomotion/velocity/config/grallator/agents/__pycache__/rsl_rl_ppo_cfg.cpython-311.pyc
+index 7404734..12ad55a 100644
+Binary files a/isaaclab/source/isaaclab_tasks/isaaclab_tasks/manager_based/locomotion/velocity/config/grallator/agents/__pycache__/rsl_rl_ppo_cfg.cpython-311.pyc and b/isaaclab/source/isaaclab_tasks/isaaclab_tasks/manager_based/locomotion/velocity/config/grallator/agents/__pycache__/rsl_rl_ppo_cfg.cpython-311.pyc differ
+diff --git a/isaaclab/source/isaaclab_tasks/isaaclab_tasks/manager_based/locomotion/velocity/config/grallator/agents/rsl_rl_ppo_cfg.py b/isaaclab/source/isaaclab_tasks/isaaclab_tasks/manager_based/locomotion/velocity/config/grallator/agents/rsl_rl_ppo_cfg.py
+index ff7cb9a..273a533 100644
+--- a/isaaclab/source/isaaclab_tasks/isaaclab_tasks/manager_based/locomotion/velocity/config/grallator/agents/rsl_rl_ppo_cfg.py
++++ b/isaaclab/source/isaaclab_tasks/isaaclab_tasks/manager_based/locomotion/velocity/config/grallator/agents/rsl_rl_ppo_cfg.py
+@@ -17,10 +17,10 @@ class GrallatorRoughPPORunnerCfg(RslRlOnPolicyRunnerCfg):
+         activation="elu",
+     )
+     algorithm = RslRlPpoAlgorithmCfg(
+-        value_loss_coef=0.5,
++        value_loss_coef=1.0,
+         use_clipped_value_loss=True,
+         clip_param=0.2,
+-        entropy_coef=0.0025,
++        entropy_coef=0.01,
+         num_learning_epochs=5,
+         num_mini_batches=4,
+         learning_rate=1.0e-3,
+diff --git a/isaaclab/source/isaaclab_tasks/isaaclab_tasks/manager_based/locomotion/velocity/config/grallator/flat_env_cfg.py b/isaaclab/source/isaaclab_tasks/isaaclab_tasks/manager_based/locomotion/velocity/config/grallator/flat_env_cfg.py
+index ee5481f..271dcd9 100644
+--- a/isaaclab/source/isaaclab_tasks/isaaclab_tasks/manager_based/locomotion/velocity/config/grallator/flat_env_cfg.py
++++ b/isaaclab/source/isaaclab_tasks/isaaclab_tasks/manager_based/locomotion/velocity/config/grallator/flat_env_cfg.py
+@@ -12,13 +12,19 @@ class GrallatorFlatEnvCfg(GrallatorRoughEnvCfg):
+         self.scene.terrain.terrain_type = "plane"
+         self.scene.terrain.terrain_generator = None
+         self.scene.height_scanner = None
++        self.scene.contact_forces = None
+         self.observations.policy.height_scan = None
+         self.curriculum.terrain_levels = None
+ 
++        # Disable contact-dependent terms for first spawn test.
++        self.rewards.feet_air_time = None
++        self.rewards.undesired_contacts = None
++        self.terminations.base_contact = None
++
+ 
+         # Reward tuning for stable first walking.
+         self.rewards.flat_orientation_l2.weight = -2.5
+-        self.rewards.feet_air_time.weight = 0.25
++        # feet_air_time disabled for first spawn test
+ 
+ 
+ 
+diff --git a/isaaclab/source/isaaclab_tasks/isaaclab_tasks/manager_based/locomotion/velocity/config/grallator/grallator.py b/isaaclab/source/isaaclab_tasks/isaaclab_tasks/manager_based/locomotion/velocity/config/grallator/grallator.py
+index df1a744..e6fe28e 100644
+--- a/isaaclab/source/isaaclab_tasks/isaaclab_tasks/manager_based/locomotion/velocity/config/grallator/grallator.py
++++ b/isaaclab/source/isaaclab_tasks/isaaclab_tasks/manager_based/locomotion/velocity/config/grallator/grallator.py
+@@ -4,38 +4,31 @@ import isaaclab.sim as sim_utils
+ from isaaclab.actuators import DCMotorCfg
+ from isaaclab.assets.articulation import ArticulationCfg
+ 
+-# Put your exported Isaac Sim USD here after importing grallator_isaac_lab.urdf.
+-# You can override this from the terminal using:
+-#   export GRALLATOR_USD_PATH=/absolute/path/to/grallator.usd
++
+ GRALLATOR_USD_PATH = os.environ.get(
+     "GRALLATOR_USD_PATH",
+-    os.path.join(os.path.dirname(__file__), "assets", "grallator.usd"),
++    "/workspace/isaaclab/grallator_quadruped_isaac/usd/grallator_final.usd",
+ )
+ 
+-GRALLATOR_DEFAULT_JOINT_POS = {
+-    # Native STANDBY keyframe pose from grallator_final.xml.
+-    # Isaac-friendly names:
+-    # hip   = original collar / ab-ad joint
+-    # thigh = original hip joint
+-    # calf  = original knee joint
+-
+-    "FR_hip_joint": 0.0,
+-    "FR_thigh_joint": -0.1,
+-    "FR_calf_joint": -0.0,
+ 
++GRALLATOR_DEFAULT_JOINT_POS = {
++    "BL_hip_joint": 0.0,
++    "BR_hip_joint": 0.0,
+     "FL_hip_joint": 0.0,
+-    "FL_thigh_joint": 0.1,
+-    "FL_calf_joint": 0.0,
++    "FR_hip_joint": 0.0,
+ 
+-    "RR_hip_joint": 0.0,
+-    "RR_thigh_joint": -0.1,
+-    "RR_calf_joint": 0.0,
++    "BL_thigh_joint": 0.30,
++    "BR_thigh_joint": -0.30,
++    "FL_thigh_joint": 0.30,
++    "FR_thigh_joint": -0.30,
+ 
+-    "RL_hip_joint": 0.0,
+-    "RL_thigh_joint": 0.1,
+-    "RL_calf_joint": 0.0,
++    "BL_calf_joint": 1.00,
++    "BR_calf_joint": -1.00,
++    "FL_calf_joint": 1.00,
++    "FR_calf_joint": -1.00,
+ }
+ 
++
+ GRALLATOR_CFG = ArticulationCfg(
+     spawn=sim_utils.UsdFileCfg(
+         usd_path=GRALLATOR_USD_PATH,
+@@ -48,29 +41,35 @@ GRALLATOR_CFG = ArticulationCfg(
+             angular_damping=0.0,
+             max_linear_velocity=1000.0,
+             max_angular_velocity=1000.0,
+-            max_depenetration_velocity=1.0,
++            max_depenetration_velocity=5.0,
+         ),
+         articulation_props=sim_utils.ArticulationRootPropertiesCfg(
+             enabled_self_collisions=False,
+-            solver_position_iteration_count=4,
+-            solver_velocity_iteration_count=0,
++            solver_position_iteration_count=8,
++            solver_velocity_iteration_count=1,
+         ),
+     ),
++
+     init_state=ArticulationCfg.InitialStateCfg(
+-        # Tune z after the Isaac Sim import test. If the body drops too far, increase it slightly.
+-        pos=(0.0, 0.0, 0.99),
++        pos=(0.0, 0.0, 0.30),
+         joint_pos=GRALLATOR_DEFAULT_JOINT_POS,
+         joint_vel={".*": 0.0},
+     ),
++
+     soft_joint_pos_limit_factor=0.9,
++
+     actuators={
+         "base_legs": DCMotorCfg(
+-            joint_names_expr=[".*_hip_joint", ".*_thigh_joint", ".*_calf_joint"],
++            joint_names_expr=[
++                ".*_hip_joint",
++                ".*_thigh_joint",
++                ".*_calf_joint",
++            ],
+             effort_limit=60.0,
+             saturation_effort=60.0,
+-            velocity_limit=25.0,
+-            stiffness=100.0,
+-            damping=5.0,
++            velocity_limit=2.0,
++            stiffness=200.0,
++            damping=10.0,
+             friction=0.0,
+         ),
+     },

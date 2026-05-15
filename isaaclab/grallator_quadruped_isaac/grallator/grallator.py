@@ -55,7 +55,7 @@ GRALLATOR_CFG = ArticulationCfg(
     ),
     init_state=ArticulationCfg.InitialStateCfg(
         # Tune z after the Isaac Sim import test. If the body drops too far, increase it slightly.
-        pos=(0.0, 0.0, 3.0),
+        pos=(0.0, 0.0, 0.69),
         joint_pos=GRALLATOR_DEFAULT_JOINT_POS,
         joint_vel={".*": 0.0},
     ),
