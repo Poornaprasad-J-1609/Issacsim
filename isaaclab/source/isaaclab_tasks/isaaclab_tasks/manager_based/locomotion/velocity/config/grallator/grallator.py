@@ -51,7 +51,7 @@ GRALLATOR_CFG = ArticulationCfg(
     ),
 
     init_state=ArticulationCfg.InitialStateCfg(
-        pos=(0.0, 0.0, 0.30),
+        pos=(0.0, 0.0, 0.75),
         joint_pos=GRALLATOR_DEFAULT_JOINT_POS,
         joint_vel={".*": 0.0},
     ),
@@ -67,9 +67,9 @@ GRALLATOR_CFG = ArticulationCfg(
             ],
             effort_limit=60.0,
             saturation_effort=60.0,
-            velocity_limit=2.0,
-            stiffness=200.0,
-            damping=10.0,
+            velocity_limit=20.0,
+            stiffness=80.0,
+            damping=3.0,
             friction=0.0,
         ),
     },

@@ -13,6 +13,11 @@ class GrallatorRoughEnvCfg(LocomotionVelocityRoughEnvCfg):
         # Robot asset
         self.scene.robot = GRALLATOR_CFG.replace(prim_path="{ENV_REGEX_NS}/Robot")
 
+        # Contact sensor path must point to actual body prims inside the imported USD.
+        # Grallator USD has bodies under Robot/grallator_isaac_lab/...
+        if self.scene.contact_forces is not None:
+            self.scene.contact_forces.prim_path = "{ENV_REGEX_NS}/Robot/grallator_isaac_lab/.*"
+
         # Grallator root/body name is "trunk", not "base".
         # Parent locomotion configs may still use "base" for COM randomization.
         if hasattr(self.events, "base_com"):
@@ -27,18 +32,19 @@ class GrallatorRoughEnvCfg(LocomotionVelocityRoughEnvCfg):
         self.scene.terrain.terrain_generator.sub_terrains["random_rough"].noise_step = 0.01
 
         # Actions are residual joint-position targets. Keep small for first training.
-        self.actions.joint_pos.scale = 0.20
+        self.actions.joint_pos.scale = 0.18
 
         # Command curriculum: start easy. Expand after the robot walks.
-        self.commands.base_velocity.ranges.lin_vel_x = (0.0, 0.45)
+        self.commands.base_velocity.ranges.lin_vel_x = (0.25, 0.35)
         self.commands.base_velocity.ranges.lin_vel_y = (0.0, 0.0)
         self.commands.base_velocity.ranges.ang_vel_z = (0.0, 0.0)
 
-        # Events/randomization: disable pushes initially; keep mild mass randomization.
+        # Events/randomization: disable disturbances for first stable flat-walking training.
         self.events.push_robot = None
-        self.events.add_base_mass.params["mass_distribution_params"] = (-1.0, 3.0)
-        self.events.add_base_mass.params["asset_cfg"].body_names = "trunk"
-        self.events.base_external_force_torque.params["asset_cfg"].body_names = "trunk"
+        self.events.add_base_mass = None
+        if hasattr(self.events, "base_com"):
+            self.events.base_com = None
+        self.events.base_external_force_torque = None
         self.events.reset_robot_joints.params["position_range"] = (1.0, 1.0)
         self.events.reset_base.params = {
             "pose_range": {"x": (-0.3, 0.3), "y": (-0.3, 0.3), "yaw": (-0.2, 0.2)},
@@ -57,7 +63,7 @@ class GrallatorRoughEnvCfg(LocomotionVelocityRoughEnvCfg):
         self.rewards.feet_air_time.weight = 0.05
         self.rewards.undesired_contacts = None
         self.rewards.dof_torques_l2.weight = -0.0002
-        self.rewards.track_lin_vel_xy_exp.weight = 1.5
+        self.rewards.track_lin_vel_xy_exp.weight = 4.0
         self.rewards.track_ang_vel_z_exp.weight = 0.3
         self.rewards.dof_acc_l2.weight = -2.5e-7
         self.rewards.action_rate_l2.weight = -0.01
@@ -66,11 +72,10 @@ class GrallatorRoughEnvCfg(LocomotionVelocityRoughEnvCfg):
         # Terminate if anything except feet touches the ground.
         # Feet are allowed: FR_foot, FL_foot, RR_foot, RL_foot.
         # Knee-walking usually appears as calf/thigh contact, so we mark these illegal.
+        # First make RL trainable: terminate only if trunk touches ground.
+        # Later we will add calf/thigh contact penalties after stable walking starts.
         self.terminations.base_contact.params["sensor_cfg"].body_names = [
             "trunk",
-            ".*_hip",
-            ".*_thigh",
-            ".*_calf",
         ]
 
 

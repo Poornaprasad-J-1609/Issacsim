@@ -12,20 +12,13 @@ class GrallatorFlatEnvCfg(GrallatorRoughEnvCfg):
         self.scene.terrain.terrain_type = "plane"
         self.scene.terrain.terrain_generator = None
         self.scene.height_scanner = None
-        self.scene.contact_forces = None
         self.observations.policy.height_scan = None
         self.curriculum.terrain_levels = None
 
-        # Disable contact-dependent terms for first spawn test.
-        self.rewards.feet_air_time = None
-        self.rewards.undesired_contacts = None
-        self.terminations.base_contact = None
-
-
-        # Reward tuning for stable first walking.
-        self.rewards.flat_orientation_l2.weight = -2.5
-        # feet_air_time disabled for first spawn test
-
+        # Keep contact sensor/reward/termination active.
+        # This forces the robot to use feet, not calf/thigh/body dragging.
+        self.rewards.feet_air_time.weight = 0.25
+        self.rewards.flat_orientation_l2.weight = -1.0
 
 
 @configclass

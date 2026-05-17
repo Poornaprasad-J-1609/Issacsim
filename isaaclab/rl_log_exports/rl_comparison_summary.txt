@@ -1,0 +1,359 @@
+
+==============================
+RL LOG COMPARISON SUMMARY
+==============================
+
+
+RUN: anymal_c_flat
+------------------------------------------------------------
+
+Train/mean_reward
+  first : step=       1, value=-1.6938
+  middle: step=     150, value=-1.1789
+  last  : step=     299, value=-1.0324
+  min   : step=      20, value=-8.5867
+  max   : step=     298, value=-1.0251
+
+Train/mean_reward/time
+  first : step=       3, value=-1.6938
+  middle: step=     171, value=-1.1789
+  last  : step=     340, value=-1.0324
+  min   : step=      24, value=-8.5867
+  max   : step=     339, value=-1.0251
+
+Train/mean_episode_length
+  first : step=       1, value=+41.0000
+  middle: step=     150, value=+18.7200
+  last  : step=     299, value=+17.0700
+  min   : step=     202, value=+16.1500
+  max   : step=      19, value=+297.8824
+
+Train/mean_episode_length/time
+  first : step=       3, value=+41.0000
+  middle: step=     171, value=+18.7200
+  last  : step=     340, value=+17.0700
+  min   : step=     230, value=+16.1500
+  max   : step=      22, value=+297.8824
+
+Episode_Reward/track_lin_vel_xy_exp
+  first : step=       0, value=+0.0000
+  middle: step=     150, value=+0.0043
+  last  : step=     299, value=+0.0024
+  min   : step=       0, value=+0.0000
+  max   : step=      16, value=+0.1623
+
+Episode_Reward/track_ang_vel_z_exp
+  first : step=       0, value=+0.0000
+  middle: step=     150, value=+0.0033
+  last  : step=     299, value=+0.0023
+  min   : step=       0, value=+0.0000
+  max   : step=      19, value=+0.0833
+
+Episode_Reward/lin_vel_z_l2
+  first : step=       0, value=+0.0000
+  middle: step=     150, value=-0.0149
+  last  : step=     299, value=-0.0161
+  min   : step=      17, value=-0.0699
+  max   : step=       0, value=+0.0000
+
+Episode_Reward/ang_vel_xy_l2
+  first : step=       0, value=+0.0000
+  middle: step=     150, value=-0.0094
+  last  : step=     299, value=-0.0094
+  min   : step=      17, value=-0.1062
+  max   : step=       0, value=+0.0000
+
+Episode_Reward/dof_torques_l2
+  first : step=       0, value=+0.0000
+  middle: step=     150, value=-0.0048
+  last  : step=     299, value=-0.0039
+  min   : step=      19, value=-0.1593
+  max   : step=       0, value=+0.0000
+
+Episode_Reward/dof_acc_l2
+  first : step=       0, value=+0.0000
+  middle: step=     150, value=-0.0152
+  last  : step=     299, value=-0.0100
+  min   : step=      16, value=-0.1555
+  max   : step=       0, value=+0.0000
+
+Episode_Reward/action_rate_l2
+  first : step=       0, value=+0.0000
+  middle: step=     150, value=-0.0045
+  last  : step=     299, value=-0.0038
+  min   : step=      19, value=-0.1016
+  max   : step=       0, value=+0.0000
+
+Episode_Reward/feet_air_time
+  first : step=       0, value=+0.0000
+  middle: step=     150, value=-0.0012
+  last  : step=     299, value=-0.0009
+  min   : step=      19, value=-0.0396
+  max   : step=       0, value=+0.0000
+
+Episode_Reward/flat_orientation_l2
+  first : step=       0, value=+0.0000
+  middle: step=     150, value=-0.0140
+  last  : step=     299, value=-0.0138
+  min   : step=      15, value=-0.0776
+  max   : step=       0, value=+0.0000
+
+Metrics/base_velocity/error_vel_xy
+  first : step=       0, value=+0.0000
+  middle: step=     150, value=+0.0330
+  last  : step=     299, value=+0.0346
+  min   : step=       0, value=+0.0000
+  max   : step=      17, value=+0.6958
+
+Metrics/base_velocity/error_vel_yaw
+  first : step=       0, value=+0.0000
+  middle: step=     150, value=+0.0278
+  last  : step=     299, value=+0.0290
+  min   : step=       0, value=+0.0000
+  max   : step=      17, value=+0.7679
+
+Episode_Termination/time_out
+  first : step=       0, value=+0.0000
+  middle: step=     150, value=+0.0000
+  last  : step=     299, value=+0.0000
+  min   : step=       0, value=+0.0000
+  max   : step=      13, value=+0.2812
+
+Episode_Termination/base_contact
+  first : step=       0, value=+0.0000
+  middle: step=     150, value=+1.0000
+  last  : step=     299, value=+1.0000
+  min   : step=       0, value=+0.0000
+  max   : step=      25, value=+1.0000
+
+
+RUN: grallator_flat
+------------------------------------------------------------
+
+Train/mean_reward
+  first : step=       3, value=-7.4313
+  middle: step=      51, value=-25.1519
+  last  : step=      99, value=-37.2251
+  min   : step=      99, value=-37.2251
+  max   : step=       3, value=-7.4313
+
+Train/mean_reward/time
+  first : step=       5, value=-7.4313
+  middle: step=      53, value=-25.1519
+  last  : step=     102, value=-37.2251
+  min   : step=     102, value=-37.2251
+  max   : step=       5, value=-7.4313
+
+Train/mean_episode_length
+  first : step=       3, value=+90.5000
+  middle: step=      51, value=+547.1500
+  last  : step=      99, value=+773.5750
+  min   : step=       3, value=+90.5000
+  max   : step=      99, value=+773.5750
+
+Train/mean_episode_length/time
+  first : step=       5, value=+90.5000
+  middle: step=      53, value=+547.1500
+  last  : step=     102, value=+773.5750
+  min   : step=       5, value=+90.5000
+  max   : step=     102, value=+773.5750
+
+Episode_Reward/track_lin_vel_xy_exp
+  first : step=       0, value=+0.0000
+  middle: step=      50, value=+0.7325
+  last  : step=      99, value=+1.1822
+  min   : step=       0, value=+0.0000
+  max   : step=      76, value=+1.3666
+
+Episode_Reward/track_ang_vel_z_exp
+  first : step=       0, value=+0.0000
+  middle: step=      50, value=+0.2801
+  last  : step=      99, value=+0.2879
+  min   : step=       0, value=+0.0000
+  max   : step=      99, value=+0.2879
+
+Episode_Reward/lin_vel_z_l2
+  first : step=       0, value=+0.0000
+  middle: step=      50, value=-0.2934
+  last  : step=      99, value=-0.2807
+  min   : step=      41, value=-0.3242
+  max   : step=       0, value=+0.0000
+
+Episode_Reward/ang_vel_xy_l2
+  first : step=       0, value=+0.0000
+  middle: step=      50, value=-0.0045
+  last  : step=      99, value=-0.0039
+  min   : step=      45, value=-0.0166
+  max   : step=       0, value=+0.0000
+
+Episode_Reward/dof_torques_l2
+  first : step=       0, value=+0.0000
+  middle: step=      50, value=-3.1110
+  last  : step=      99, value=-3.0041
+  min   : step=      66, value=-3.2741
+  max   : step=       0, value=+0.0000
+
+Episode_Reward/dof_acc_l2
+  first : step=       0, value=+0.0000
+  middle: step=      50, value=-0.0302
+  last  : step=      99, value=-0.0264
+  min   : step=      59, value=-0.0389
+  max   : step=       0, value=+0.0000
+
+Episode_Reward/action_rate_l2
+  first : step=       0, value=+0.0000
+  middle: step=      50, value=-0.2657
+  last  : step=      99, value=-0.2604
+  min   : step=      82, value=-0.2752
+  max   : step=       0, value=+0.0000
+
+Episode_Reward/flat_orientation_l2
+  first : step=       0, value=+0.0000
+  middle: step=      50, value=-0.0821
+  last  : step=      99, value=-0.2536
+  min   : step=      99, value=-0.2536
+  max   : step=       0, value=+0.0000
+
+Metrics/base_velocity/error_vel_xy
+  first : step=       0, value=+0.0000
+  middle: step=      50, value=+0.8525
+  last  : step=      99, value=+0.4407
+  min   : step=       0, value=+0.0000
+  max   : step=      47, value=+0.8525
+
+Metrics/base_velocity/error_vel_yaw
+  first : step=       0, value=+0.0000
+  middle: step=      50, value=+0.2070
+  last  : step=      99, value=+0.1602
+  min   : step=       0, value=+0.0000
+  max   : step=      41, value=+0.2229
+
+Episode_Termination/time_out
+  first : step=       0, value=+0.0000
+  middle: step=      50, value=+1.0000
+  last  : step=      99, value=+1.0000
+  min   : step=       0, value=+0.0000
+  max   : step=      41, value=+1.0000
+
+
+RUN: unitree_go2_flat
+------------------------------------------------------------
+
+Train/mean_reward
+  first : step=       3, value=-0.9593
+  middle: step=     151, value=-14.8346
+  last  : step=     299, value=-15.8668
+  min   : step=     277, value=-16.3970
+  max   : step=       3, value=-0.9593
+
+Train/mean_reward/time
+  first : step=       5, value=-0.9593
+  middle: step=     154, value=-14.8346
+  last  : step=     303, value=-15.8668
+  min   : step=     281, value=-16.3970
+  max   : step=       5, value=-0.9593
+
+Train/mean_episode_length
+  first : step=       3, value=+90.5000
+  middle: step=     151, value=+694.6622
+  last  : step=     299, value=+914.7300
+  min   : step=       3, value=+90.5000
+  max   : step=     294, value=+914.7300
+
+Train/mean_episode_length/time
+  first : step=       5, value=+90.5000
+  middle: step=     154, value=+694.6622
+  last  : step=     303, value=+914.7300
+  min   : step=       5, value=+90.5000
+  max   : step=     298, value=+914.7300
+
+Episode_Reward/track_lin_vel_xy_exp
+  first : step=       0, value=+0.0000
+  middle: step=     150, value=+0.0557
+  last  : step=     299, value=+0.0093
+  min   : step=       0, value=+0.0000
+  max   : step=     295, value=+1.0813
+
+Episode_Reward/track_ang_vel_z_exp
+  first : step=       0, value=+0.0000
+  middle: step=     150, value=+0.2771
+  last  : step=     299, value=+0.1538
+  min   : step=       0, value=+0.0000
+  max   : step=     270, value=+0.3134
+
+Episode_Reward/lin_vel_z_l2
+  first : step=       0, value=+0.0000
+  middle: step=     150, value=-0.0596
+  last  : step=     299, value=-0.0712
+  min   : step=     220, value=-0.1176
+  max   : step=       0, value=+0.0000
+
+Episode_Reward/ang_vel_xy_l2
+  first : step=       0, value=+0.0000
+  middle: step=     150, value=-0.5758
+  last  : step=     299, value=-0.4493
+  min   : step=      89, value=-0.7220
+  max   : step=       0, value=+0.0000
+
+Episode_Reward/dof_torques_l2
+  first : step=       0, value=+0.0000
+  middle: step=     150, value=-0.1304
+  last  : step=     299, value=-0.1210
+  min   : step=     100, value=-0.1760
+  max   : step=       0, value=+0.0000
+
+Episode_Reward/dof_acc_l2
+  first : step=       0, value=+0.0000
+  middle: step=     150, value=-0.1979
+  last  : step=     299, value=-0.1464
+  min   : step=      76, value=-0.2653
+  max   : step=       0, value=+0.0000
+
+Episode_Reward/action_rate_l2
+  first : step=       0, value=+0.0000
+  middle: step=     150, value=-0.2585
+  last  : step=     299, value=-0.2248
+  min   : step=      83, value=-0.2988
+  max   : step=       0, value=+0.0000
+
+Episode_Reward/feet_air_time
+  first : step=       0, value=+0.0000
+  middle: step=     150, value=-0.0539
+  last  : step=     299, value=-0.0520
+  min   : step=     118, value=-0.0625
+  max   : step=       0, value=+0.0000
+
+Episode_Reward/flat_orientation_l2
+  first : step=       0, value=+0.0000
+  middle: step=     150, value=-0.1000
+  last  : step=     299, value=-0.0618
+  min   : step=     124, value=-0.1791
+  max   : step=       0, value=+0.0000
+
+Metrics/base_velocity/error_vel_xy
+  first : step=       0, value=+0.0000
+  middle: step=     150, value=+2.0114
+  last  : step=     299, value=+2.3890
+  min   : step=       0, value=+0.0000
+  max   : step=     131, value=+2.4580
+
+Metrics/base_velocity/error_vel_yaw
+  first : step=       0, value=+0.0000
+  middle: step=     150, value=+1.4613
+  last  : step=     299, value=+2.2258
+  min   : step=       0, value=+0.0000
+  max   : step=     267, value=+2.2428
+
+Episode_Termination/time_out
+  first : step=       0, value=+0.0000
+  middle: step=     150, value=+0.8750
+  last  : step=     299, value=+0.9375
+  min   : step=       0, value=+0.0000
+  max   : step=     118, value=+1.0000
+
+Episode_Termination/base_contact
+  first : step=       0, value=+0.0000
+  middle: step=     150, value=+0.1250
+  last  : step=     299, value=+0.0625
+  min   : step=       0, value=+0.0000
+  max   : step=      56, value=+0.5000

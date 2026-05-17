@@ -1,0 +1,64 @@
+
+==============================
+GRALLATOR OLD vs NEW ACTUATOR
+==============================
+
+Train/mean_reward
+------------------------------------------------------------
+old_grallator  : first= -7.4313 | mid=-25.1519 | last=-37.2251 | min=-37.2251 | max= -7.4313
+new_grallator  : first= -9.9100 | mid=-13.1221 | last= -7.4332 | min=-16.7871 | max= -7.4332
+
+Train/mean_episode_length
+------------------------------------------------------------
+old_grallator  : first=+90.5000 | mid=+547.1500 | last=+773.5750 | min=+90.5000 | max=+773.5750
+new_grallator  : first=+90.5000 | mid=+849.0500 | last=+1000.0000 | min=+90.5000 | max=+1000.0000
+
+Episode_Reward/track_lin_vel_xy_exp
+------------------------------------------------------------
+old_grallator  : first= +0.0000 | mid= +0.7325 | last= +1.1822 | min= +0.0000 | max= +1.3666
+new_grallator  : first= +0.0000 | mid= +1.0528 | last= +1.2502 | min= +0.0000 | max= +1.4534
+
+Episode_Reward/lin_vel_z_l2
+------------------------------------------------------------
+old_grallator  : first= +0.0000 | mid= -0.2934 | last= -0.2807 | min= -0.3242 | max= +0.0000
+new_grallator  : first= +0.0000 | mid= -0.4398 | last= -0.3175 | min= -0.6021 | max= +0.0000
+
+Episode_Reward/dof_torques_l2
+------------------------------------------------------------
+old_grallator  : first= +0.0000 | mid= -3.1110 | last= -3.0041 | min= -3.2741 | max= +0.0000
+new_grallator  : first= +0.0000 | mid= -0.9750 | last= -0.8659 | min= -1.9064 | max= +0.0000
+
+Episode_Reward/dof_acc_l2
+------------------------------------------------------------
+old_grallator  : first= +0.0000 | mid= -0.0302 | last= -0.0264 | min= -0.0389 | max= +0.0000
+new_grallator  : first= +0.0000 | mid= -0.0298 | last= -0.0194 | min= -0.0298 | max= +0.0000
+
+Episode_Reward/action_rate_l2
+------------------------------------------------------------
+old_grallator  : first= +0.0000 | mid= -0.2657 | last= -0.2604 | min= -0.2752 | max= +0.0000
+new_grallator  : first= +0.0000 | mid= -0.2588 | last= -0.2400 | min= -0.3209 | max= +0.0000
+
+Episode_Reward/flat_orientation_l2
+------------------------------------------------------------
+old_grallator  : first= +0.0000 | mid= -0.0821 | last= -0.2536 | min= -0.2536 | max= +0.0000
+new_grallator  : first= +0.0000 | mid= -0.0622 | last= -0.0189 | min= -1.6590 | max= +0.0000
+
+Metrics/base_velocity/error_vel_xy
+------------------------------------------------------------
+old_grallator  : first= +0.0000 | mid= +0.8525 | last= +0.4407 | min= +0.0000 | max= +0.8525
+new_grallator  : first= +0.0000 | mid= +0.5720 | last= +0.4277 | min= +0.0000 | max= +0.8401
+
+Metrics/base_velocity/error_vel_yaw
+------------------------------------------------------------
+old_grallator  : first= +0.0000 | mid= +0.2070 | last= +0.1602 | min= +0.0000 | max= +0.2229
+new_grallator  : first= +0.0000 | mid= +0.0977 | last= +0.0463 | min= +0.0000 | max= +0.1321
+
+Episode_Termination/time_out
+------------------------------------------------------------
+old_grallator  : first= +0.0000 | mid= +1.0000 | last= +1.0000 | min= +0.0000 | max= +1.0000
+new_grallator  : first= +0.0000 | mid= +1.0000 | last= +1.0000 | min= +0.0000 | max= +1.0000
+
+Episode_Termination/base_contact
+------------------------------------------------------------
+old_grallator  : NOT FOUND
+new_grallator  : NOT FOUND
