@@ -27,12 +27,12 @@ class GrallatorFlatEnvCfg(GrallatorRoughEnvCfg):
 
         # Stronger body-upright penalty.
         # Your old value was -1.0, which is too weak.
-        self.rewards.flat_orientation_l2.weight = -3.0
+        self.rewards.flat_orientation_l2.weight = -5.0
 
         # Encourage real stepping.
         # Your old value was 0.25.
         # Anymal uses 0.5, but Grallator can start with 0.35.
-        self.rewards.feet_air_time.weight = 0.35
+        self.rewards.feet_air_time.weight = 0.5
 
         # Penalize excessive motor torque.
         # This helps avoid violent leg kicking.
