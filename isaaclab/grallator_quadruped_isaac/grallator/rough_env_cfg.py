@@ -12,31 +12,40 @@ class GrallatorRoughEnvCfg(LocomotionVelocityRoughEnvCfg):
     def __post_init__(self):
         super().__post_init__()
 
+        # ---------------------------------------------------------
         # Robot asset
+        # ---------------------------------------------------------
         self.scene.robot = GRALLATOR_CFG.replace(prim_path="{ENV_REGEX_NS}/Robot")
 
         # Grallator root/body name is "trunk", not "base".
-        # Parent locomotion configs may still use "base" for COM randomization.
         if hasattr(self.events, "base_com"):
             self.events.base_com.params["asset_cfg"].body_names = "trunk"
 
-        # Grallator base body is named trunk in the Isaac-friendly URDF.
-        self.scene.height_scanner.prim_path = "{ENV_REGEX_NS}/Robot/trunk"
-
-        # Conservative terrain settings. Use rough only after flat walking works.
+        # Height scanner stays enabled for rough terrain.
+       # Disable height scanner for flat -> rough checkpoint transfer.
+        # This keeps rough observation size same as flat policy.
+        self.scene.height_scanner = None
+        self.observations.policy.height_scan = None
+        # ---------------------------------------------------------
+        # Rough terrain setup
+        # Keep rough terrain, but make it mild while transferring from flat.
+        # ---------------------------------------------------------
         self.scene.terrain.terrain_generator.sub_terrains["boxes"].grid_height_range = (0.025, 0.08)
         self.scene.terrain.terrain_generator.sub_terrains["random_rough"].noise_range = (0.005, 0.04)
         self.scene.terrain.terrain_generator.sub_terrains["random_rough"].noise_step = 0.01
 
-        # Actions are residual joint-position targets. Keep small for first training.
-        self.actions.joint_pos.scale = 0.20
+        # ---------------------------------------------------------
+        # SAME AS FLAT ENVIRONMENT
+        # ---------------------------------------------------------
+        self.commands.base_velocity.ranges.lin_vel_x = (-1.0, 1.8)
+        self.commands.base_velocity.ranges.lin_vel_y = (-0.8, 1.2)
+        self.commands.base_velocity.ranges.ang_vel_z = (-0.6, 0.6)
 
-        # Command curriculum: start easy. Expand after the robot walks.
-        self.commands.base_velocity.ranges.lin_vel_x = (0.0, 0.45)
-        self.commands.base_velocity.ranges.lin_vel_y = (0.0, 0.0)
-        self.commands.base_velocity.ranges.ang_vel_z = (0.0, 0.0)
+        self.actions.joint_pos.scale = 0.25
 
-        # Events/randomization: disable pushes initially; keep mild mass randomization.
+        # ---------------------------------------------------------
+        # Events/randomization
+        # ---------------------------------------------------------
         self.events.push_robot = None
         self.events.add_base_mass.params["mass_distribution_params"] = (-1.0, 3.0)
         self.events.add_base_mass.params["asset_cfg"].body_names = "trunk"
@@ -54,14 +63,152 @@ class GrallatorRoughEnvCfg(LocomotionVelocityRoughEnvCfg):
             },
         }
 
-        # Rewards: feet are cleanly named FR_foot, FL_foot, RR_foot, RL_foot.
+        # ---------------------------------------------------------
+        # SAME REWARDS/PENALTIES AS FLAT ENVIRONMENT
+        # ---------------------------------------------------------
+        self.rewards.flat_orientation_l2.weight = -11.0
+
+        self.rewards.track_lin_vel_xy_exp.weight = 2.5
+        self.rewards.track_ang_vel_z_exp.weight = 0.09
+
         self.rewards.feet_air_time.params["sensor_cfg"].body_names = ".*_foot"
-        self.rewards.feet_air_time.weight = 0.05
-        # Penalize trunk/hip/thigh/calf ground contact.
-        # This discourages crawling, belly sliding, and calf/knee walking.
+        self.rewards.feet_air_time.weight = 0.25
+
+        self.rewards.lin_vel_z_l2.weight = -3.6
+        self.rewards.ang_vel_xy_l2.weight = -0.05
+        self.rewards.dof_torques_l2.weight = -2.5e-5
+        self.rewards.dof_acc_l2.weight = -1.0e-6
+        self.rewards.action_rate_l2.weight = -0.030
+
+        # ---------------------------------------------------------
+        # SAME STANDING POSTURE PENALTIES AS FLAT ENVIRONMENT
+        # These pull joints toward GRALLATOR_DEFAULT_JOINT_POS.
+        # ---------------------------------------------------------
+        self.rewards.rear_thigh_posture = RewTerm(
+            func=mdp.joint_deviation_l1,
+            weight=-0.10,
+            params={
+                "asset_cfg": SceneEntityCfg(
+                    "robot",
+                    joint_names=[
+                        "BL_thigh_joint",
+                        "BR_thigh_joint",
+                    ],
+                )
+            },
+        )
+
+        self.rewards.rear_calf_posture = RewTerm(
+            func=mdp.joint_deviation_l1,
+            weight=-0.20,
+            params={
+                "asset_cfg": SceneEntityCfg(
+                    "robot",
+                    joint_names=[
+                        "BL_calf_joint",
+                        "BR_calf_joint",
+                    ],
+                )
+            },
+        )
+
+        self.rewards.front_thigh_posture = RewTerm(
+            func=mdp.joint_deviation_l1,
+            weight=-0.10,
+            params={
+                "asset_cfg": SceneEntityCfg(
+                    "robot",
+                    joint_names=[
+                        "FL_thigh_joint",
+                        "FR_thigh_joint",
+                    ],
+                )
+            },
+        )
+
+        self.rewards.front_calf_posture = RewTerm(
+            func=mdp.joint_deviation_l1,
+            weight=-0.20,
+            params={
+                "asset_cfg": SceneEntityCfg(
+                    "robot",
+                    joint_names=[
+                        "FL_calf_joint",
+                        "FR_calf_joint",
+                    ],
+                )
+            },
+        )
+
+        self.rewards.rear_hip_posture = RewTerm(
+            func=mdp.joint_deviation_l1,
+            weight=-0.08,
+            params={
+                "asset_cfg": SceneEntityCfg(
+                    "robot",
+                    joint_names=[
+                        "BL_hip_joint",
+                        "BR_hip_joint",
+                    ],
+                )
+            },
+        )
+
+        self.rewards.front_hip_posture = RewTerm(
+            func=mdp.joint_deviation_l1,
+            weight=-0.04,
+            params={
+                "asset_cfg": SceneEntityCfg(
+                    "robot",
+                    joint_names=[
+                        "FL_hip_joint",
+                        "FR_hip_joint",
+                    ],
+                )
+            },
+        )
+
+        # ---------------------------------------------------------
+        # Same individual foot step terms from flat environment
+        # ---------------------------------------------------------
+        foot_air_func = self.rewards.feet_air_time.func
+        base_foot_air_params = dict(self.rewards.feet_air_time.params)
+
+        fl_params = dict(base_foot_air_params)
+        fl_params["sensor_cfg"] = SceneEntityCfg("contact_forces", body_names="FL_foot")
+
+        fr_params = dict(base_foot_air_params)
+        fr_params["sensor_cfg"] = SceneEntityCfg("contact_forces", body_names="FR_foot")
+
+        bl_params = dict(base_foot_air_params)
+        bl_params["sensor_cfg"] = SceneEntityCfg("contact_forces", body_names="BL_foot")
+
+        br_params = dict(base_foot_air_params)
+        br_params["sensor_cfg"] = SceneEntityCfg("contact_forces", body_names="BR_foot")
+
+        self.rewards.fl_step_bonus = RewTerm(func=foot_air_func, weight=0.008, params=fl_params)
+        self.rewards.fr_step_bonus = RewTerm(func=foot_air_func, weight=0.008, params=fr_params)
+        self.rewards.bl_step_bonus = RewTerm(func=foot_air_func, weight=0.02, params=bl_params)
+        self.rewards.br_step_bonus = RewTerm(func=foot_air_func, weight=0.02, params=br_params)
+
+        # ---------------------------------------------------------
+        # Same base height reward as flat environment
+        # ---------------------------------------------------------
+        self.rewards.base_height = RewTerm(
+            func=mdp.base_height_l2,
+            weight=4.8,
+            params={
+                "target_height": 0.50,
+                "asset_cfg": SceneEntityCfg("robot"),
+            },
+        )
+
+        # ---------------------------------------------------------
+        # Same contact penalty as flat environment
+        # ---------------------------------------------------------
         self.rewards.undesired_contacts = RewTerm(
             func=mdp.undesired_contacts,
-            weight=-5.0,
+            weight=-5.5,
             params={
                 "sensor_cfg": SceneEntityCfg(
                     "contact_forces",
@@ -72,42 +219,32 @@ class GrallatorRoughEnvCfg(LocomotionVelocityRoughEnvCfg):
                         ".*_calf",
                     ],
                 ),
-                "threshold": 0.02,
+                "threshold": 0.03,
             },
         )
-        self.rewards.dof_torques_l2.weight = -0.0002
-        self.rewards.track_lin_vel_xy_exp.weight = 1.5
-        self.rewards.track_ang_vel_z_exp.weight = 0.3
-        self.rewards.dof_acc_l2.weight = -2.5e-7
-        self.rewards.action_rate_l2.weight = -0.01
 
-        # Termination: fall when trunk/base contacts ground.
-        # Terminate if anything except feet touches the ground.
-        # Feet are allowed: FR_foot, FL_foot, RR_foot, RL_foot.
-        # Knee-walking usually appears as calf/thigh contact, so we mark these illegal.
-        self.terminations.base_contact.params["sensor_cfg"].body_names = [
-            "trunk",
-            ".*_hip",
-            ".*_thigh",
-            ".*_calf",
-        ]
-        self.terminations.base_contact.params["threshold"] = 0.05
+        # ---------------------------------------------------------
+        # Same terminations as flat environment
+        # ---------------------------------------------------------
+        if getattr(self.terminations, "base_contact", None) is not None:
+            self.terminations.base_contact.params["sensor_cfg"].body_names = [
+                "trunk",
+                ".*_hip",
+            ]
+            self.terminations.base_contact.params["threshold"] = 0.08
 
-        # Extra anti-crawling / anti-lying-down terminations.
-        # If the trunk/root goes too low, terminate.
         self.terminations.base_height = DoneTerm(
             func=mdp.root_height_below_minimum,
             params={
-                "minimum_height": 0.35,
+                "minimum_height": 0.44,
                 "asset_cfg": SceneEntityCfg("robot"),
             },
         )
 
-        # If the body tilts too much, terminate.
         self.terminations.bad_orientation = DoneTerm(
             func=mdp.bad_orientation,
             params={
-                "limit_angle": 0.8,
+                "limit_angle": 0.90,
                 "asset_cfg": SceneEntityCfg("robot"),
             },
         )

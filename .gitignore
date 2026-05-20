@@ -1,0 +1,44 @@
+
+# Python cache
+__pycache__/
+*.pyc
+
+# Training logs and generated outputs
+logs/
+outputs/
+**/logs/
+**/outputs/
+
+# RL checkpoints / model files
+*.pt
+*.pth
+*.ckpt
+*.onnx
+*.zip
+
+# Isaac/NVIDIA generated files
+*.etli
+
+# Python cache
+__pycache__/
+*.pyc
+
+# Training logs and generated outputs
+logs/
+outputs/
+**/logs/
+**/outputs/
+
+# RL checkpoints / model files
+*.pt
+*.pth
+*.ckpt
+*.onnx
+*.zip
+
+# Isaac/NVIDIA generated files
+*.etli
+
+# Python cache
+__pycache__/
+*.pyc

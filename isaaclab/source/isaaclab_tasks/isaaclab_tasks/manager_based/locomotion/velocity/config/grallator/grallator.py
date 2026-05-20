@@ -45,32 +45,74 @@ GRALLATOR_CFG = ArticulationCfg(
         ),
         articulation_props=sim_utils.ArticulationRootPropertiesCfg(
             enabled_self_collisions=False,
-            solver_position_iteration_count=8,
-            solver_velocity_iteration_count=1,
+            solver_position_iteration_count=12,
+            solver_velocity_iteration_count=2,
         ),
     ),
 
     init_state=ArticulationCfg.InitialStateCfg(
-        pos=(0.0, 0.0, 0.75),
+        pos=(0.0, 0.0, 0.38),
         joint_pos=GRALLATOR_DEFAULT_JOINT_POS,
         joint_vel={".*": 0.0},
     ),
 
     soft_joint_pos_limit_factor=0.9,
+   actuators={
+        # ---------------------------------------------------------
+        # High-Power Industrial Config with Saturation Constraints (13.0 kg Robot)
+        # ---------------------------------------------------------
+        "front_hips": DCMotorCfg(
+            joint_names_expr=["FL_hip_joint", "FR_hip_joint"],
+            stiffness=80.0,            # High rigidity to maintain lateral structural integrity
+            damping=5.0,               # Mathematically paired damping to avoid joint tremor
+            effort_limit=60.0,         # Continuous maximum torque (Nm)
+            saturation_effort=85.0,    # Peak burst torque to handle quick changes in direction
+            velocity_limit=25.0,       # Speed ceiling (rad/s)
+        ),
 
-    actuators={
-        "base_legs": DCMotorCfg(
-            joint_names_expr=[
-                ".*_hip_joint",
-                ".*_thigh_joint",
-                ".*_calf_joint",
-            ],
-            effort_limit=60.0,
-            saturation_effort=60.0,
-            velocity_limit=20.0,
-            stiffness=80.0,
-            damping=3.0,
-            friction=0.0,
+        "rear_hips": DCMotorCfg(
+            joint_names_expr=["BL_hip_joint", "BR_hip_joint"],
+            stiffness=80.0,            
+            damping=5.0,               
+            effort_limit=75.0,         
+            saturation_effort=100.0,   # Stronger peak tolerance for rear abduction stability
+            velocity_limit=25.0,       
+        ),
+
+        "front_thighs": DCMotorCfg(
+            joint_names_expr=["FL_thigh_joint", "FR_thigh_joint"],
+            stiffness=110.0,           # High tracking rigidity to force the torso upward
+            damping=6.5,               
+            effort_limit=90.0,         
+            saturation_effort=130.0,   # Massive peak ceiling to break static sitting inertia
+            velocity_limit=22.0,       
+        ),
+
+       "rear_thighs": DCMotorCfg(
+            joint_names_expr=["BL_thigh_joint", "BR_thigh_joint"],
+            stiffness=130.0,           # Maximum stiffness concentrated in rear driving joints
+            damping=8.0,               
+            effort_limit=120.0,        
+            saturation_effort=160.0,   # High saturation allows dynamic push-off during gaits
+            velocity_limit=22.0,       
+        ),
+
+        "front_calves": DCMotorCfg(
+            joint_names_expr=["FL_calf_joint", "FR_calf_joint"],
+            stiffness=110.0,           
+            damping=6.5,               
+            effort_limit=95.0,         
+            saturation_effort=140.0,   # High peak capacity protects against hard ground impacts
+            velocity_limit=22.0,       
+        ),
+   
+        "rear_calves": DCMotorCfg(
+            joint_names_expr=["BL_calf_joint", "BR_calf_joint"],
+            stiffness=130.0,           
+            damping=8.0,               
+            effort_limit=130.0,        
+            saturation_effort=170.0,   # Highest peak saturation to prevent buckling on impact
+            velocity_limit=22.0,       
         ),
     },
 )
