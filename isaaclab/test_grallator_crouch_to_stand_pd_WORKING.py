@@ -80,7 +80,7 @@ GRALLATOR_CFG = ArticulationCfg(
         # For your almost-straight standing pose, start higher.
         # If robot drops too hard, try 1.20.
         # If it floats too much, try 0.95.
-        pos=(0.0, 0.0, 0.3),
+        pos=(0.0, 0.0, 0.5),
         joint_pos=CROUCH_POSE,
     ),
 

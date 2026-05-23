@@ -5,19 +5,15 @@ from isaaclab_tasks.manager_based.locomotion.velocity.velocity_env_cfg import Lo
 ##
 # Pre-defined configs
 ##
-from .grallator import GRALLATOR_CFG as CUSTOM_QUAD_CFG
+from isaaclab_tasks.manager_based.locomotion.velocity.config.custom_quadruped.custom_quad import CUSTOM_QUAD_CFG
 
 @configclass
-class GrallatorRoughEnvCfg(LocomotionVelocityRoughEnvCfg):
+class CustomQuadRoughEnvCfg(LocomotionVelocityRoughEnvCfg):
     def __post_init__(self):
         # post init of parent
         super().__post_init__()
 
         self.scene.robot = CUSTOM_QUAD_CFG.replace(prim_path="{ENV_REGEX_NS}/Robot")
-
-        # Grallator USD has nested root: Robot/grallator_isaac_lab/<bodies>
-        # Contact sensor must point to the actual body prims.
-        self.scene.contact_forces.prim_path = "{ENV_REGEX_NS}/Robot/grallator_isaac_lab/.*"
         self.scene.height_scanner.prim_path = None
         # No depth camera. 
         self.scene.depth_camera = None
@@ -64,7 +60,7 @@ class GrallatorRoughEnvCfg(LocomotionVelocityRoughEnvCfg):
         self.terminations.base_contact.params["sensor_cfg"].body_names = ["trunk", ".*_thigh"]
 
 @configclass
-class GrallatorRoughEnvCfg_PLAY(GrallatorRoughEnvCfg):
+class CustomQuadRoughEnvCfg_PLAY(CustomQuadRoughEnvCfg):
     def __post_init__(self):
         # post init of parent
         super().__post_init__()

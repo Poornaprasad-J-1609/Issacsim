@@ -6,72 +6,6 @@ from isaaclab_tasks.manager_based.locomotion.velocity.velocity_env_cfg import Lo
 
 from .grallator import GRALLATOR_CFG
 
-def _force_grallator_boxes_random_rough(cfg):
-    """Force Grallator rough env to use only boxes + random rough terrain."""
-    from copy import deepcopy
-
-    cfg.scene.terrain.terrain_type = "generator"
-
-    if cfg.scene.terrain.terrain_generator is None:
-        raise RuntimeError("terrain_generator is None. Rough terrain generator is not active.")
-
-    # Make private copy so we do not mutate shared ROUGH_TERRAINS_CFG globally.
-    cfg.scene.terrain.terrain_generator = deepcopy(cfg.scene.terrain.terrain_generator)
-    tg = cfg.scene.terrain.terrain_generator
-
-    # Disable terrain curriculum properly.
-    if hasattr(cfg.curriculum, "terrain_levels"):
-        cfg.curriculum.terrain_levels = None
-
-    tg.curriculum = False
-    cfg.scene.terrain.max_init_terrain_level = None
-
-    # Remove the huge white flat border around the generated terrain.
-    if hasattr(tg, "border_width"):
-        tg.border_width = 0.0
-
-    # Remove white tile material if you do not want the white floor look.
-    cfg.scene.terrain.visual_material = None
-
-    # Keep only these terrains.
-    keep = {
-        "boxes": 0.70,
-        "random_rough": 0.30,
-    }
-
-    available = list(tg.sub_terrains.keys())
-    missing = [name for name in keep if name not in tg.sub_terrains]
-    if missing:
-        raise RuntimeError(f"Missing terrain keys {missing}. Available keys are: {available}")
-
-    # Delete every unwanted terrain key.
-    tg.sub_terrains = {
-        name: terrain_cfg
-        for name, terrain_cfg in tg.sub_terrains.items()
-        if name in keep
-    }
-
-    # Set final proportions.
-    for name, prop in keep.items():
-        tg.sub_terrains[name].proportion = prop
-
-    # Remove central flat spawn platform inside each patch.
-    # For training stability, use 0.3 or 0.5 instead of 0.0.
-    for name, terrain_cfg in tg.sub_terrains.items():
-        if hasattr(terrain_cfg, "platform_width"):
-            terrain_cfg.platform_width = 0.0
-
-    # Make roughness visible.
-    if "boxes" in tg.sub_terrains:
-        tg.sub_terrains["boxes"].grid_height_range = (0.04, 0.14)
-
-    if "random_rough" in tg.sub_terrains:
-        tg.sub_terrains["random_rough"].noise_range = (0.02, 0.08)
-        tg.sub_terrains["random_rough"].noise_step = 0.02
-
-    print("[GRALLATOR TERRAIN PATCH] Final terrain keys:", list(tg.sub_terrains.keys()))
-
-
 
 @configclass
 class GrallatorRoughEnvCfg(LocomotionVelocityRoughEnvCfg):
@@ -321,8 +255,6 @@ class GrallatorRoughEnvCfg(LocomotionVelocityRoughEnvCfg):
                 "asset_cfg": SceneEntityCfg("robot"),
             },
         )
-
-        _force_grallator_boxes_random_rough(self)
 
 
 @configclass
