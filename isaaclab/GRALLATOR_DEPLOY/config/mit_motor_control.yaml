@@ -1,0 +1,46 @@
+mit_protocol:
+  # RobStride / CyberGear-style MIT control frame.
+  # If your firmware uses a different master_id, change this later.
+  comm_type_mit_control: 1
+  master_id: 0
+
+  p_min: -12.5
+  p_max: 12.5
+  v_min: -30.0
+  v_max: 30.0
+  kp_min: 0.0
+  kp_max: 500.0
+  kd_min: 0.0
+  kd_max: 5.0
+  tau_min: -12.0
+  tau_max: 12.0
+
+startup:
+  standup_seconds: 4.0
+
+gains:
+  startup:
+    hip:
+      kp: 5.0
+      kd: 0.35
+    thigh:
+      kp: 6.0
+      kd: 0.45
+    calf:
+      kp: 6.0
+      kd: 0.45
+
+  policy:
+    hip:
+      kp: 10.0
+      kd: 0.45
+    thigh:
+      kp: 12.0
+      kd: 0.55
+    calf:
+      kp: 12.0
+      kd: 0.55
+
+feedforward:
+  tau_ff: 0.0
+  v_des: 0.0

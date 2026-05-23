@@ -1,0 +1,34 @@
+# Joystick walking direction control
+
+axes:
+  # left stick Y -> forward/backward
+  vx_axis: 1
+
+  # left stick X -> left/right
+  vy_axis: 0
+
+  # right stick X -> turning/yaw
+  yaw_axis: 3
+
+invert:
+  # Many controllers give left-stick-up as -1, so vx is usually inverted.
+  vx: true
+  vy: false
+  yaw: false
+
+speed_limits:
+  # Start low for real robot.
+  # Increase only after suspended and ground tests are stable.
+  max_vx: 0.15
+  max_vy: 0.10
+  max_yaw: 0.30
+
+filter:
+  deadzone: 0.08
+  expo: 0.35
+  smoothing: 0.20
+
+buttons:
+  stand: 0
+  sit: 1
+  policy: 2

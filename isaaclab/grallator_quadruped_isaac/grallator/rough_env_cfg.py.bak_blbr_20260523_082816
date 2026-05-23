@@ -164,8 +164,8 @@ class GrallatorRoughEnvCfg(LocomotionVelocityRoughEnvCfg):
                 "asset_cfg": SceneEntityCfg(
                     "robot",
                     joint_names=[
-                        "RL_thigh_joint",
-                        "RR_thigh_joint",
+                        "BL_thigh_joint",
+                        "BR_thigh_joint",
                     ],
                 )
             },
@@ -178,8 +178,8 @@ class GrallatorRoughEnvCfg(LocomotionVelocityRoughEnvCfg):
                 "asset_cfg": SceneEntityCfg(
                     "robot",
                     joint_names=[
-                        "RL_calf_joint",
-                        "RR_calf_joint",
+                        "BL_calf_joint",
+                        "BR_calf_joint",
                     ],
                 )
             },
@@ -220,8 +220,8 @@ class GrallatorRoughEnvCfg(LocomotionVelocityRoughEnvCfg):
                 "asset_cfg": SceneEntityCfg(
                     "robot",
                     joint_names=[
-                        "RL_hip_joint",
-                        "RR_hip_joint",
+                        "BL_hip_joint",
+                        "BR_hip_joint",
                     ],
                 )
             },
@@ -253,16 +253,16 @@ class GrallatorRoughEnvCfg(LocomotionVelocityRoughEnvCfg):
         fr_params = dict(base_foot_air_params)
         fr_params["sensor_cfg"] = SceneEntityCfg("contact_forces", body_names="FR_foot")
 
-        rl_params = dict(base_foot_air_params)
-        rl_params["sensor_cfg"] = SceneEntityCfg("contact_forces", body_names="RL_foot")
+        bl_params = dict(base_foot_air_params)
+        bl_params["sensor_cfg"] = SceneEntityCfg("contact_forces", body_names="BL_foot")
 
-        rr_params = dict(base_foot_air_params)
-        rr_params["sensor_cfg"] = SceneEntityCfg("contact_forces", body_names="RR_foot")
+        br_params = dict(base_foot_air_params)
+        br_params["sensor_cfg"] = SceneEntityCfg("contact_forces", body_names="BR_foot")
 
         self.rewards.fl_step_bonus = RewTerm(func=foot_air_func, weight=0.008, params=fl_params)
         self.rewards.fr_step_bonus = RewTerm(func=foot_air_func, weight=0.008, params=fr_params)
-        self.rewards.rl_step_bonus = RewTerm(func=foot_air_func, weight=0.02, params=rl_params)
-        self.rewards.rr_step_bonus = RewTerm(func=foot_air_func, weight=0.02, params=rr_params)
+        self.rewards.bl_step_bonus = RewTerm(func=foot_air_func, weight=0.02, params=bl_params)
+        self.rewards.br_step_bonus = RewTerm(func=foot_air_func, weight=0.02, params=br_params)
 
         # ---------------------------------------------------------
         # Same base height reward as flat environment
