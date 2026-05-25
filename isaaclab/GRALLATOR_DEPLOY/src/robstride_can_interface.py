@@ -1,5 +1,13 @@
 #!/usr/bin/env python3
 import time
+from dataclasses import dataclass
+
+
+@dataclass
+class CanFrame:
+    can_id: int
+    data: bytes
+    timestamp: float
 
 
 def serial_encoded_ext_id(can_id: int) -> bytes:
@@ -25,6 +33,7 @@ class ATUsbCan:
         self.baud = baud
         self.timeout = timeout
         self.ser = None
+        self.rx_buffer = bytearray()
 
     def open(self):
         import serial
@@ -51,6 +60,76 @@ class ATUsbCan:
         self.ser.write(pkt)
         self.ser.flush()
         return pkt
+
+    def _pop_frames_from_rx_buffer(self):
+        frames = []
+
+        while True:
+            start = self.rx_buffer.find(b"AT")
+            if start < 0:
+                if self.rx_buffer.endswith(b"A"):
+                    self.rx_buffer[:] = b"A"
+                else:
+                    self.rx_buffer.clear()
+                break
+
+            if start > 0:
+                del self.rx_buffer[:start]
+
+            header_len = 7  # "AT" + 4-byte serial ID + 1-byte DLC
+            if len(self.rx_buffer) < header_len:
+                break
+
+            dlc = self.rx_buffer[6]
+            if dlc > 8:
+                del self.rx_buffer[:2]
+                continue
+
+            packet_len = header_len + dlc + 2
+            if len(self.rx_buffer) < packet_len:
+                break
+
+            if self.rx_buffer[packet_len - 2:packet_len] != b"\r\n":
+                del self.rx_buffer[:2]
+                continue
+
+            serial_id = int.from_bytes(self.rx_buffer[2:6], "big")
+            can_id = (serial_id >> 3) & 0x1FFFFFFF
+            data = bytes(self.rx_buffer[7:7 + dlc])
+            del self.rx_buffer[:packet_len]
+            frames.append(CanFrame(can_id=can_id, data=data, timestamp=time.monotonic()))
+
+        return frames
+
+    def read_available_frames(self, timeout=0.0, max_frames=256):
+        """
+        Read AT-encoded CAN frames currently available from the adapter.
+
+        Expected packet format matches make_at_packet():
+            b"AT" + 4-byte encoded extended ID + 1-byte DLC + data + b"\\r\\n"
+        """
+        if self.ser is None:
+            raise RuntimeError("Serial port is not open")
+
+        frames = []
+        deadline = time.monotonic() + float(timeout)
+
+        while len(frames) < max_frames:
+            waiting = getattr(self.ser, "in_waiting", 0)
+            should_wait = timeout > 0.0 and time.monotonic() < deadline
+            read_size = waiting if waiting > 0 else (512 if should_wait else 0)
+
+            if read_size <= 0:
+                break
+
+            chunk = self.ser.read(read_size)
+            if chunk:
+                self.rx_buffer.extend(chunk)
+                frames.extend(self._pop_frames_from_rx_buffer())
+            elif not should_wait:
+                break
+
+        return frames[:max_frames]
 
     def send_signal_frame(self, motor_id: int):
         """

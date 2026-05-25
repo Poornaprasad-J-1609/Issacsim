@@ -27,8 +27,8 @@ observation_layout:
   previous_action: [36, 47]
 
 command_limits:
-  vx_min: -0.30
-  vx_max: 0.30
+  vx_min: -1.2
+  vx_max: 1.2
   vy_min: -0.20
   vy_max: 0.20
   yaw_min: -0.50

@@ -1,0 +1,42 @@
+# Runtime control limits and switches.
+#
+# Set enabled: false on a section to let the policy command through that layer.
+# The joystick always owns commanded vx/vy/yaw. RobStride protocol packing still
+# saturates to the physical protocol ranges in mit_motor_control.yaml.
+
+velocity_command:
+  enabled: true
+  vx_min: -0.30
+  vx_max: 0.30
+  vy_min: -0.20
+  vy_max: 0.20
+  yaw_min: -0.50
+  yaw_max: 0.50
+
+joystick_speed_scale:
+  initial: 0.50
+  min: 0.20
+  max: 1.00
+  step: 0.10
+
+joint_position:
+  enabled: true
+
+joint_rate:
+  enabled: true
+
+mit_parameters:
+  enabled: true
+  p_min: -12.5
+  p_max: 12.5
+  v_min: -30.0
+  v_max: 30.0
+  kp_min: 0.0
+  kp_max: 30.0
+  kd_min: 0.0
+  kd_max: 2.0
+  tau_ff_min: -2.0
+  tau_ff_max: 2.0
+
+telemetry:
+  compact_only: true

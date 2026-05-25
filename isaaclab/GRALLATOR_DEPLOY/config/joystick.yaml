@@ -28,7 +28,21 @@ filter:
   expo: 0.35
   smoothing: 0.20
 
+connection:
+  # Wait briefly for wireless receivers/controllers to enumerate.
+  wait_seconds: 5.0
+
 buttons:
-  stand: 0
-  sit: 1
-  policy: 2
+  # Button 5 moves to stand pose.
+  stand: 5
+  policy: -1
+
+  # Button 4 stops walking policy and moves to crouch/sit pose.
+  sit: 4
+
+  # Any of these buttons immediately exits the controller loop.
+  emergency_stop: [0, 1, 2, 3]
+
+  # Runtime speed scale buttons.
+  speed_down: 6
+  speed_up: 7

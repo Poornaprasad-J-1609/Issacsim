@@ -1,50 +1,7 @@
-q_min:
-  FL_hip_joint: -0.55
-  FR_hip_joint: -0.35
-  BL_hip_joint: -0.55
-  BR_hip_joint: -0.35
-
-  FL_thigh_joint: -0.75
-  FR_thigh_joint: -0.75
-  BL_thigh_joint: -0.75
-  BR_thigh_joint: -0.75
-
-  FL_calf_joint: -1.20
-  FR_calf_joint: -1.20
-  BL_calf_joint: -1.20
-  BR_calf_joint: -1.20
-
-q_max:
-  FL_hip_joint: 0.35
-  FR_hip_joint: 0.35
-  BL_hip_joint: 0.35
-  BR_hip_joint: 0.35
-
-  FL_thigh_joint: 0.75
-  FR_thigh_joint: 0.75
-  BL_thigh_joint: 0.75
-  BR_thigh_joint: 0.75
-
-  FL_calf_joint: 1.20
-  FR_calf_joint: 1.20
-  BL_calf_joint: 1.20
-  BR_calf_joint: 1.20
-
-dq_max_per_step:
-  FL_hip_joint: 0.035
-  FR_hip_joint: 0.035
-  BL_hip_joint: 0.035
-  BR_hip_joint: 0.035
-
-  FL_thigh_joint: 0.045
-  FR_thigh_joint: 0.045
-  BL_thigh_joint: 0.045
-  BR_thigh_joint: 0.045
-
-  FL_calf_joint: 0.060
-  FR_calf_joint: 0.060
-  BL_calf_joint: 0.060
-  BR_calf_joint: 0.060
+# Emergency-stop thresholds.
+#
+# Per-joint position and rate limits now live in:
+#   config/joint_limits.yaml
 
 emergency:
   projected_gravity_gz_min: -0.75

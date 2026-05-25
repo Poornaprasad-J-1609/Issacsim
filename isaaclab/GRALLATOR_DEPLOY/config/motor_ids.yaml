@@ -1,16 +1,21 @@
 motor_ids:
-  FR_hip_joint: 1
-  FR_thigh_joint: 2
-  FR_calf_joint: 3
+  FR_hip_joint: 0x01
+  FR_thigh_joint: 0x02
+  FR_calf_joint: 0x03
 
-  FL_hip_joint: 4
-  FL_thigh_joint: 5
-  FL_calf_joint: 6
+  FL_hip_joint: 0x04
+  FL_thigh_joint: 0x05
+  FL_calf_joint: 0x06
 
-  BR_hip_joint: 7
-  BR_thigh_joint: 8
-  BR_calf_joint: 9
+  BR_hip_joint: 0x07
+  BR_thigh_joint: 0x08
+  BR_calf_joint: 0x09
 
-  BL_hip_joint: 10
-  BL_thigh_joint: 11
-  BL_calf_joint: 12
+  BL_hip_joint: 0x0A
+  BL_thigh_joint: 0x0B
+  BL_calf_joint: 0x0C
+
+# Empty means command all 12 joints.
+# For a one-leg two-motor test, either edit this list or pass:
+#   --active-joints FL_thigh_joint FL_calf_joint
+active_joints: []

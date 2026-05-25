@@ -1,0 +1,59 @@
+# Joint safety limits in radians.
+#
+# Edit this file to tune per-joint command limits. The controller clips every
+# policy, sit, and stand target through these limits before MIT packets are sent.
+#
+# dq_max_per_step is the maximum target change per 20 ms control step by default
+# because config/joint_map.yaml currently sets control_dt: 0.02.
+
+joint_limits:
+  FL_hip_joint:
+    min: -0.55
+    max: 0.35
+    dq_max_per_step: 0.02
+  FR_hip_joint:
+    min: -0.35
+    max: 0.35
+    dq_max_per_step: 0.02
+  BL_hip_joint:
+    min: -0.55
+    max: 0.35
+    dq_max_per_step: 0.02
+  BR_hip_joint:
+    min: -0.35
+    max: 0.35
+    dq_max_per_step: 0.02
+
+  FL_thigh_joint:
+    min: -0.75
+    max: 0.75
+    dq_max_per_step: 0.02
+  FR_thigh_joint:
+    min: -0.75
+    max: 0.75
+    dq_max_per_step: 0.02
+  BL_thigh_joint:
+    min: -0.75
+    max: 0.75
+    dq_max_per_step: 0.02
+  BR_thigh_joint:
+    min: -0.75
+    max: 0.75
+    dq_max_per_step: 0.02
+
+  FL_calf_joint:
+    min: -1.20
+    max: 1.20
+    dq_max_per_step: 0.02
+  FR_calf_joint:
+    min: -1.20
+    max: 1.20
+    dq_max_per_step: 0.02
+  BL_calf_joint:
+    min: -1.20
+    max: 1.20
+    dq_max_per_step: 0.02
+  BR_calf_joint:
+    min: -1.20
+    max: 1.20
+    dq_max_per_step: 0.02
