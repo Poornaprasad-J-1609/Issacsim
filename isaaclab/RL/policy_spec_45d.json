@@ -1,0 +1,139 @@
+{
+  "policy_path": "policy.pt",
+  "policy_hz": 50.0,
+  "action_scale": null,
+  "action_clip": null,
+  "obs_clip": null,
+  "joint_order": [
+    "FL_hip_joint",
+    "FR_hip_joint",
+    "BL_hip_joint",
+    "BR_hip_joint",
+    "FL_thigh_joint",
+    "FR_thigh_joint",
+    "BL_thigh_joint",
+    "BR_thigh_joint",
+    "FL_calf_joint",
+    "FR_calf_joint",
+    "BL_calf_joint",
+    "BR_calf_joint"
+  ],
+  "default_joint_pos": {
+    "FR_hip_joint": 0.0,
+    "FR_thigh_joint": 0.0,
+    "FR_calf_joint": 0.0,
+    "FL_hip_joint": 0.0,
+    "FL_thigh_joint": 0.0,
+    "FL_calf_joint": 0.0,
+    "BR_hip_joint": 0.0,
+    "BR_thigh_joint": 0.0,
+    "BR_calf_joint": 0.0,
+    "BL_hip_joint": 0.0,
+    "BL_thigh_joint": 0.0,
+    "BL_calf_joint": 0.0
+  },
+  "stand_joint_pos": {
+    "FR_hip_joint": 0.0,
+    "FR_thigh_joint": 0.0,
+    "FR_calf_joint": 0.0,
+    "FL_hip_joint": 0.0,
+    "FL_thigh_joint": 0.0,
+    "FL_calf_joint": 0.0,
+    "BR_hip_joint": 0.0,
+    "BR_thigh_joint": 0.0,
+    "BR_calf_joint": 0.0,
+    "BL_hip_joint": 0.0,
+    "BL_thigh_joint": 0.0,
+    "BL_calf_joint": 0.0
+  },
+  "policy_gains": {
+    "hip": {
+      "kp": null,
+      "kd": null
+    },
+    "thigh": {
+      "kp": null,
+      "kd": null
+    },
+    "calf": {
+      "kp": null,
+      "kd": null
+    }
+  },
+  "observation_terms": [
+    {
+      "name": "base_ang_vel",
+      "scale": null
+    },
+    {
+      "name": "projected_gravity",
+      "scale": null
+    },
+    {
+      "name": "command",
+      "scale": null
+    },
+    {
+      "name": "joint_pos_rel",
+      "scale": null
+    },
+    {
+      "name": "joint_vel",
+      "scale": null
+    },
+    {
+      "name": "previous_action",
+      "scale": null
+    }
+  ],
+  "joint_limits": {
+    "FR_hip_joint": [
+      -1.6,
+      1.6
+    ],
+    "FR_thigh_joint": [
+      -1.6,
+      1.6
+    ],
+    "FR_calf_joint": [
+      -1.6,
+      1.6
+    ],
+    "FL_hip_joint": [
+      -1.6,
+      1.6
+    ],
+    "FL_thigh_joint": [
+      -1.6,
+      1.6
+    ],
+    "FL_calf_joint": [
+      -1.6,
+      1.6
+    ],
+    "BR_hip_joint": [
+      -1.6,
+      1.6
+    ],
+    "BR_thigh_joint": [
+      -1.6,
+      1.6
+    ],
+    "BR_calf_joint": [
+      -1.6,
+      1.6
+    ],
+    "BL_hip_joint": [
+      -1.6,
+      1.6
+    ],
+    "BL_thigh_joint": [
+      -1.6,
+      1.6
+    ],
+    "BL_calf_joint": [
+      -1.6,
+      1.6
+    ]
+  }
+}
