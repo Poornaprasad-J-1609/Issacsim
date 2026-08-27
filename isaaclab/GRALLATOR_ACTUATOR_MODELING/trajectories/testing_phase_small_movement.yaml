@@ -1,0 +1,34 @@
+control_hz: 50.0
+
+description: >
+  Suspended testing phase for Kp=250 and Kd=4. Starting targets come from live
+  logical encoder feedback. Only FL_hip_joint performs one +0.05 rad excursion
+  and return; every other joint holds its measured starting position.
+
+segments:
+  - name: hold_measured_start
+    type: hold
+    duration_s: 1.0
+    target: {}
+
+  - name: small_FL_hip_excursion
+    type: minimum_jerk
+    duration_s: 2.0
+    relative_target:
+      FL_hip_joint: 0.05
+
+  - name: hold_excursion
+    type: hold
+    duration_s: 1.0
+    target: {}
+
+  - name: return_FL_hip_to_start
+    type: minimum_jerk
+    duration_s: 2.0
+    relative_target:
+      FL_hip_joint: -0.05
+
+  - name: final_hold_at_start
+    type: hold
+    duration_s: 1.0
+    target: {}

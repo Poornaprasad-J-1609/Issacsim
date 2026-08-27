@@ -95,8 +95,23 @@ def build_trajectory(spec, initial_q, expected_hz=50.0):
             raise ValueError(f"{name}: duration_s must produce at least one sample")
 
         start = current.copy()
-        if kind in ("hold", "linear", "smoothstep"):
-            target = joint_vector(segment.get("target"), base=start, field=f"{name}.target")
+        if kind in ("hold", "linear", "smoothstep", "minimum_jerk"):
+            has_target = "target" in segment
+            has_relative_target = "relative_target" in segment
+            if has_target and has_relative_target:
+                raise ValueError(
+                    f"{name}: use either target or relative_target, not both"
+                )
+            if has_relative_target:
+                delta = joint_vector(
+                    segment.get("relative_target"),
+                    field=f"{name}.relative_target",
+                )
+                target = start + delta
+            else:
+                target = joint_vector(
+                    segment.get("target"), base=start, field=f"{name}.target"
+                )
             for local_index in range(count):
                 if kind == "hold":
                     q = target
@@ -104,6 +119,12 @@ def build_trajectory(spec, initial_q, expected_hz=50.0):
                     alpha = float(local_index + 1) / float(count)
                     if kind == "smoothstep":
                         alpha = alpha * alpha * (3.0 - 2.0 * alpha)
+                    elif kind == "minimum_jerk":
+                        alpha = (
+                            10.0 * alpha**3
+                            - 15.0 * alpha**4
+                            + 6.0 * alpha**5
+                        )
                     q = start + alpha * (target - start)
                 samples.append(TrajectorySample(
                     index=global_index,
@@ -147,4 +168,3 @@ def build_trajectory(spec, initial_q, expected_hz=50.0):
 def load_trajectory(path, initial_q, expected_hz=50.0):
     spec = load_yaml(path)
     return spec, build_trajectory(spec, initial_q, expected_hz=expected_hz)
-

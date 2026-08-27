@@ -10,6 +10,7 @@ from pace_modeling.controller import (
     verify_deployment_contract,
 )
 from pace_modeling.trajectory import build_trajectory
+from pace_modeling.main import load_config
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -47,6 +48,23 @@ class TrajectoryTests(unittest.TestCase):
     def test_pace_calibration_matches_deployment(self):
         config = load_yaml(ROOT / "config" / "pace_config.yaml")
         verify_deployment_contract(config, ROOT.parent / "GRALLATOR_DEPLOY")
+
+    def test_testing_phase_is_one_relative_minimum_jerk_excursion(self):
+        initial = np.linspace(-0.2, 0.2, 12)
+        spec = load_yaml(
+            ROOT / "trajectories" / "testing_phase_small_movement.yaml"
+        )
+        samples = build_trajectory(spec, initial, expected_hz=50.0)
+        self.assertEqual(len(samples), 350)
+        self.assertAlmostEqual(samples[149].q_requested[0], initial[0] + 0.05)
+        np.testing.assert_allclose(samples[149].q_requested[1:], initial[1:])
+        np.testing.assert_allclose(samples[-1].q_requested, initial, atol=1.0e-12)
+
+    def test_testing_phase_uses_requested_pace_gains(self):
+        config = load_config(ROOT / "config" / "testing_phase_kp250_kd4.yaml")
+        self.assertEqual(float(config["kp"]), 250.0)
+        self.assertEqual(float(config["kd"]), 4.0)
+        self.assertEqual(float(config["control_hz"]), 50.0)
 
 
 if __name__ == "__main__":

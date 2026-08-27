@@ -15,6 +15,18 @@ from .controller import load_yaml, run_dry, run_hardware
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 
 
+def load_config(path):
+    path = Path(path).resolve()
+    config = load_yaml(path)
+    inherited = config.pop("extends", None)
+    if inherited is None:
+        return config
+    base_path = (path.parent / str(inherited)).resolve()
+    base = load_config(base_path)
+    base.update(config)
+    return base
+
+
 def default_deploy_root():
     configured = os.environ.get("GRALLATOR_DEPLOY_ROOT")
     if configured:
@@ -59,7 +71,7 @@ def parser():
 
 def main(argv=None):
     args = parser().parse_args(argv)
-    config = load_yaml(args.config)
+    config = load_config(args.config)
     configured_hz = float(config.get("control_hz", 0.0))
     if abs(configured_hz - 50.0) > 1.0e-9:
         raise SystemExit(f"ERROR: PACE control_hz must be exactly 50, got {configured_hz}")

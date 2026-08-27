@@ -31,11 +31,33 @@ Isaac/URDF radians and may be supplied by joint name. Supported segment types:
 - `hold`
 - `linear`
 - `smoothstep`
+- `minimum_jerk` (`10u^3 - 15u^4 + 6u^5`)
 - `sine`
 - `chirp` with `linear` or `logarithmic` frequency law
 
 Unspecified joints retain the preceding segment's target. The runtime always
 logs both the requested trajectory and the final transmitted target.
+Use `relative_target` instead of `target` to specify an offset from the target
+at the beginning of that segment.
+
+## Kp/Kd testing phase
+
+Before collecting the full PACE datasets, run the one-joint suspended test:
+
+```bash
+python3 -m pace_modeling \
+  --config config/testing_phase_kp250_kd4.yaml \
+  --deploy-root ~/JetsonNanoDeploy \
+  --dataset testing_phase \
+  --trajectory trajectories/testing_phase_small_movement.yaml \
+  --can-front slcan0 \
+  --can-back slcan1
+```
+
+This uses `Kp=250`, `Kd=4` on all twelve enabled actuators but moves only the
+FL hip by `+0.05 rad` relative to its measured start and then returns it. The
+robot must be fully suspended. Use the same gains when replaying this dataset
+in Isaac; otherwise PACE can mistake controller mismatch for plant dynamics.
 
 ## Dry run
 
@@ -147,4 +169,3 @@ the configured direction and offset. Separate `0x7019/0x701B` parameter reads
 are deliberately not interleaved with MIT streaming because doing so can make
 the SDK consume a status frame as a parameter reply. The metadata records this
 distinction explicitly.
-
