@@ -1,0 +1,46 @@
+control_hz: 50.0
+description: "Different 20 second validation motion; not used for fitting"
+segments:
+  - name: validation_center
+    type: smoothstep
+    duration_s: 3.0
+    target:
+      FL_calf_joint: 0.30
+      FR_calf_joint: -0.30
+      BL_calf_joint: 0.30
+      BR_calf_joint: -0.30
+
+  - name: waypoint_positive
+    type: smoothstep
+    duration_s: 3.0
+    target:
+      FL_thigh_joint: 0.10
+
+  - name: hold_positive
+    type: hold
+    duration_s: 2.0
+    target: {}
+
+  - name: waypoint_negative
+    type: smoothstep
+    duration_s: 4.0
+    target:
+      FL_thigh_joint: -0.08
+
+  - name: hold_negative
+    type: hold
+    duration_s: 2.0
+    target: {}
+
+  - name: validation_sine
+    type: sine
+    duration_s: 4.0
+    frequency_hz: 0.75
+    amplitude:
+      FL_thigh_joint: 0.08
+
+  - name: final_hold
+    type: hold
+    duration_s: 2.0
+    target: {}
+

@@ -1,0 +1,31 @@
+control_hz: 50.0
+description: "20 second, 1000-sample fitting example; small FL thigh chirp"
+segments:
+  - name: move_to_safe_center
+    type: smoothstep
+    duration_s: 2.0
+    target:
+      FL_calf_joint: 0.30
+      FR_calf_joint: -0.30
+      BL_calf_joint: 0.30
+      BR_calf_joint: -0.30
+
+  - name: pre_chirp_hold
+    type: hold
+    duration_s: 2.0
+    target: {}
+
+  - name: fitting_chirp
+    type: chirp
+    duration_s: 14.0
+    f_start_hz: 0.10
+    f_end_hz: 3.0
+    law: logarithmic
+    amplitude:
+      FL_thigh_joint: 0.10
+
+  - name: post_chirp_hold
+    type: hold
+    duration_s: 2.0
+    target: {}
+

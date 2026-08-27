@@ -1,0 +1,102 @@
+control_hz: 50.0
+can_bitrate: 1000000
+can_timeout_s: 0.01
+feedback_timeout_s: 0.012
+max_feedback_age_s: 0.020
+
+# Conservative suspended-test defaults. These values are metadata and are also
+# the actual effective gains requested in every PACE command packet.
+kp: 50.0
+kd: 2.0
+
+# Limits are applied before packet construction. The resulting q_des is logged.
+max_command_rate_rad_s:
+  FL_hip_joint: 0.40
+  FR_hip_joint: 0.40
+  BL_hip_joint: 0.40
+  BR_hip_joint: 0.40
+  FL_thigh_joint: 0.60
+  FR_thigh_joint: 0.60
+  BL_thigh_joint: 0.60
+  BR_thigh_joint: 0.60
+  FL_calf_joint: 0.60
+  FR_calf_joint: 0.60
+  BL_calf_joint: 0.60
+  BR_calf_joint: 0.60
+
+max_estimated_torque_nm: 20.0
+max_measured_torque_nm: 25.0
+max_velocity_rad_s: 6.0
+max_temperature_c: 65.0
+max_loop_lateness_s: 0.010
+max_consecutive_overruns: 3
+
+motor_ids:
+  FL_hip_joint: 4
+  FR_hip_joint: 1
+  BL_hip_joint: 10
+  BR_hip_joint: 7
+  FL_thigh_joint: 5
+  FR_thigh_joint: 2
+  BL_thigh_joint: 11
+  BR_thigh_joint: 8
+  FL_calf_joint: 6
+  FR_calf_joint: 3
+  BL_calf_joint: 12
+  BR_calf_joint: 9
+
+joint_can_bus:
+  FL_hip_joint: front
+  FR_hip_joint: front
+  BL_hip_joint: back
+  BR_hip_joint: back
+  FL_thigh_joint: front
+  FR_thigh_joint: front
+  BL_thigh_joint: back
+  BR_thigh_joint: back
+  FL_calf_joint: front
+  FR_calf_joint: front
+  BL_calf_joint: back
+  BR_calf_joint: back
+
+motor_directions:
+  FL_hip_joint: -1
+  FR_hip_joint: -1
+  BL_hip_joint: -1
+  BR_hip_joint: -1
+  FL_thigh_joint: -1
+  FR_thigh_joint: -1
+  BL_thigh_joint: -1
+  BR_thigh_joint: -1
+  FL_calf_joint: 1
+  FR_calf_joint: 1
+  BL_calf_joint: 1
+  BR_calf_joint: 1
+
+joint_offsets:
+  FL_hip_joint: 0.0
+  FR_hip_joint: 0.0
+  BL_hip_joint: 0.0
+  BR_hip_joint: 0.0
+  FL_thigh_joint: 0.0
+  FR_thigh_joint: 0.0
+  BL_thigh_joint: 0.0
+  BR_thigh_joint: 0.0
+  FL_calf_joint: 0.0
+  FR_calf_joint: 0.0
+  BL_calf_joint: 0.0
+  BR_calf_joint: 0.0
+
+joint_limits:
+  FL_hip_joint: {min: -0.50, max: 0.50}
+  FR_hip_joint: {min: -0.50, max: 0.50}
+  BL_hip_joint: {min: -0.50, max: 0.50}
+  BR_hip_joint: {min: -0.50, max: 0.50}
+  FL_thigh_joint: {min: -2.0, max: 2.0}
+  FR_thigh_joint: {min: -2.0, max: 2.0}
+  BL_thigh_joint: {min: -2.0, max: 2.0}
+  BR_thigh_joint: {min: -2.0, max: 2.0}
+  FL_calf_joint: {min: 0.0, max: 1.36}
+  FR_calf_joint: {min: -1.36, max: 0.0}
+  BL_calf_joint: {min: 0.0, max: 1.36}
+  BR_calf_joint: {min: -1.36, max: 0.0}

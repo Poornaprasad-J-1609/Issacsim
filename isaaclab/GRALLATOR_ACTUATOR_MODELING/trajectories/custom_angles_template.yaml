@@ -1,0 +1,37 @@
+control_hz: 50.0
+description: "Replace these named logical Isaac-coordinate angles with test values"
+segments:
+  - name: pose_1
+    type: smoothstep
+    duration_s: 3.0
+    target:
+      FL_hip_joint: 0.0
+      FR_hip_joint: 0.0
+      BL_hip_joint: 0.0
+      BR_hip_joint: 0.0
+      FL_thigh_joint: 0.0
+      FR_thigh_joint: 0.0
+      BL_thigh_joint: 0.0
+      BR_thigh_joint: 0.0
+      FL_calf_joint: 0.30
+      FR_calf_joint: -0.30
+      BL_calf_joint: 0.30
+      BR_calf_joint: -0.30
+
+  - name: hold_pose_1
+    type: hold
+    duration_s: 2.0
+    target: {}
+
+  - name: pose_2
+    type: smoothstep
+    duration_s: 3.0
+    target:
+      FL_thigh_joint: 0.10
+      FR_thigh_joint: -0.10
+
+  - name: hold_pose_2
+    type: hold
+    duration_s: 2.0
+    target: {}
+
