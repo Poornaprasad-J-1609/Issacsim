@@ -630,6 +630,7 @@ def run_timing_validation(config, deploy_root, can_front, can_back, duration_s):
     loop_work = []
     missed_deadlines = 0
     incomplete_feedback = 0
+    incomplete_details = []
     try:
         feedback_types = (
             int(layer.proto.get("comm_type_feedback", 2)),
@@ -652,6 +653,25 @@ def run_timing_validation(config, deploy_root, can_front, can_back, duration_s):
         expected = estimator.expected_feedback_bus_motor_ids()
         feedback_timeout = float(config.get("feedback_timeout_s", 0.003))
         tolerance = float(config.get("deadline_miss_tolerance_s", 0.0005))
+        warmup_cycles = int(config.get("timing_validation_warmup_cycles", 20))
+        if warmup_cycles < 0:
+            raise ValueError("timing_validation_warmup_cycles cannot be negative")
+
+        # Fill the request/reply pipeline before measuring it. Marking the
+        # batch before transmission is important: front-lane motors can reply
+        # while the remainder of the two-CAN batch is still being sent.
+        for _ in range(warmup_cycles):
+            warmup_start = time.monotonic()
+            estimator.mark_command_sent(warmup_start)
+            layer.send_raw_commands(buses, layer.build_feedback_poll_commands())
+            estimator.refresh_from_bus(
+                timeout=feedback_timeout,
+                expected_bus_motor_ids=expected,
+            )
+            remaining = dt - (time.monotonic() - warmup_start)
+            if remaining > 0.0:
+                time.sleep(remaining)
+
         count = int(round(float(duration_s) * control_hz))
         start = time.monotonic()
         previous = start - dt
@@ -663,14 +683,18 @@ def run_timing_validation(config, deploy_root, can_front, can_back, duration_s):
             wake = time.monotonic()
             if wake - deadline > tolerance:
                 missed_deadlines += 1
+            command_send = time.monotonic()
+            estimator.mark_command_sent(command_send)
             layer.send_raw_commands(buses, layer.build_feedback_poll_commands())
-            estimator.mark_command_sent(time.monotonic())
             estimator.refresh_from_bus(
                 timeout=feedback_timeout,
                 expected_bus_motor_ids=expected,
             )
-            if set(estimator.last_refresh_current_bus_motor_ids) != expected:
+            received = set(estimator.last_refresh_current_bus_motor_ids)
+            if received != expected:
                 incomplete_feedback += 1
+                if len(incomplete_details) < 10:
+                    incomplete_details.append((index, sorted(expected - received)))
             end = time.monotonic()
             loop_dts.append(wake - previous)
             loop_work.append(end - wake)
@@ -689,7 +713,15 @@ def run_timing_validation(config, deploy_root, can_front, can_back, duration_s):
         missed_deadlines,
         label="PASSIVE TWO-CAN",
     )
+    print(f"excluded warm-up cycles: {warmup_cycles}")
     print(f"incomplete feedback cycles: {incomplete_feedback}")
+    if incomplete_details:
+        print("first incomplete measured cycles:")
+        for index, missing in incomplete_details:
+            formatted = ", ".join(
+                f"{bus}:0x{motor_id:02X}" for bus, motor_id in missing
+            )
+            print(f"  cycle {index}: missing {formatted}")
     qualified = (
         incomplete_feedback == 0
         and loop_work
