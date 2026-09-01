@@ -28,7 +28,7 @@ CONTROL_HZ = 50.0
 CONTROL_DT = 1.0 / CONTROL_HZ
 FREQUENCY_START_HZ = 0.1
 FREQUENCY_END_HZ = 5.0
-CHIRP_DURATION_S = 20.0
+DEFAULT_CHIRP_DURATION_S = 60.0
 
 # Exact PACE fitting order. Name-based routing converts this to CAN lanes/IDs.
 JOINT_ORDER = [
@@ -157,7 +157,13 @@ def parse_args(argv=None):
     parser.add_argument("--hip-amplitude", type=float, default=0.25)
     parser.add_argument("--thigh-amplitude", type=float, default=0.25)
     parser.add_argument("--calf-amplitude", type=float, default=0.25)
-    parser.add_argument("--transition-seconds", type=float, default=4.0)
+    parser.add_argument("--transition-seconds", type=float, default=8.0)
+    parser.add_argument(
+        "--chirp-duration",
+        type=float,
+        default=DEFAULT_CHIRP_DURATION_S,
+        help="seconds used to increase linearly from 0.1 to 5.0 Hz",
+    )
     parser.add_argument("--pre-chirp-hold-seconds", type=float, default=2.0)
     parser.add_argument("--post-chirp-hold-seconds", type=float, default=1.0)
     parser.add_argument("--max-velocity", type=float, default=18.0)
@@ -193,6 +199,7 @@ def validate_arguments(args):
         "kp": args.kp,
         "torque_limit": args.torque_limit,
         "transition_seconds": args.transition_seconds,
+        "chirp_duration": args.chirp_duration,
         "pre_chirp_hold_seconds": args.pre_chirp_hold_seconds,
         "post_chirp_hold_seconds": args.post_chirp_hold_seconds,
         "max_velocity": args.max_velocity,
@@ -253,9 +260,10 @@ def minimum_jerk(u: float) -> float:
     return 10.0 * u**3 - 15.0 * u**4 + 6.0 * u**5
 
 
-def chirp_values(t: float, q_mean, amplitudes, directions):
-    t = min(CHIRP_DURATION_S, max(0.0, float(t)))
-    slope = (FREQUENCY_END_HZ - FREQUENCY_START_HZ) / CHIRP_DURATION_S
+def chirp_values(t: float, q_mean, amplitudes, directions, duration_s: float):
+    duration_s = float(duration_s)
+    t = min(duration_s, max(0.0, float(t)))
+    slope = (FREQUENCY_END_HZ - FREQUENCY_START_HZ) / duration_s
     phase = 2.0 * math.pi * (FREQUENCY_START_HZ * t + 0.5 * slope * t * t)
     frequency = FREQUENCY_START_HZ + slope * t
     q_des = q_mean + directions * amplitudes * math.sin(phase)
@@ -277,8 +285,14 @@ def preflight(args):
             f"reaches the emergency threshold {args.max_velocity:.3f} rad/s"
         )
     # Sample every control instant as a second guard against formula mistakes.
-    for index in range(int(CHIRP_DURATION_S * CONTROL_HZ) + 1):
-        q_des, _, _ = chirp_values(index * CONTROL_DT, q_mean, amplitudes, directions)
+    for index in range(int(args.chirp_duration * CONTROL_HZ) + 1):
+        q_des, _, _ = chirp_values(
+            index * CONTROL_DT,
+            q_mean,
+            amplitudes,
+            directions,
+            args.chirp_duration,
+        )
         validate_target(q_des, f"chirp sample {index}")
     return q_mean, amplitudes, directions, peak_command_speed
 
@@ -288,7 +302,13 @@ def print_configuration(args, q_mean, amplitudes, directions, peak_speed):
     print("Mode:", "REAL HARDWARE REQUESTED" if args.enable_motors else "DRY RUN")
     print(f"Control rate: {CONTROL_HZ:.1f} Hz ({CONTROL_DT:.3f} s)")
     print(f"Frequency: {FREQUENCY_START_HZ:.1f} -> {FREQUENCY_END_HZ:.1f} Hz")
-    print(f"Chirp duration: {CHIRP_DURATION_S:.1f} s")
+    frequency_slope = (
+        FREQUENCY_END_HZ - FREQUENCY_START_HZ
+    ) / args.chirp_duration
+    print(
+        f"Chirp duration: {args.chirp_duration:.1f} s "
+        f"(frequency rise {frequency_slope:.4f} Hz/s)"
+    )
     print(f"Transition / holds: {args.transition_seconds:.1f} / "
           f"{args.pre_chirp_hold_seconds:.1f} / {args.post_chirp_hold_seconds:.1f} s")
     print(f"Kp={args.kp:.3f} Kd={args.kd:.3f} torque ceiling={args.torque_limit:.3f} Nm")
@@ -406,7 +426,7 @@ def make_logger(args, deploy_root, motor_ids, directions, offsets, routing):
         "control_hz": CONTROL_HZ,
         "frequency_start_hz": FREQUENCY_START_HZ,
         "frequency_end_hz": FREQUENCY_END_HZ,
-        "chirp_duration_s": CHIRP_DURATION_S,
+        "chirp_duration_s": args.chirp_duration,
         "kp_requested": args.kp,
         "kd_requested": args.kd,
         "torque_limit_nm": args.torque_limit,
@@ -543,7 +563,7 @@ def wait_until(deadline: float):
 def requested_target(elapsed, initial_q, q_mean, amplitudes, directions, args):
     transition_end = args.transition_seconds
     pre_hold_end = transition_end + args.pre_chirp_hold_seconds
-    chirp_end = pre_hold_end + CHIRP_DURATION_S
+    chirp_end = pre_hold_end + args.chirp_duration
     return_end = chirp_end + args.transition_seconds
     final_end = return_end + args.post_chirp_hold_seconds
     if elapsed < transition_end:
@@ -553,9 +573,21 @@ def requested_target(elapsed, initial_q, q_mean, amplitudes, directions, args):
         return q_mean.copy(), "pre_chirp_hold", float("nan"), float("nan")
     if elapsed < chirp_end:
         chirp_time = elapsed - pre_hold_end
-        q_des, frequency, _ = chirp_values(chirp_time, q_mean, amplitudes, directions)
+        q_des, frequency, _ = chirp_values(
+            chirp_time,
+            q_mean,
+            amplitudes,
+            directions,
+            args.chirp_duration,
+        )
         return q_des, "chirp", chirp_time, frequency
-    q_chirp_end, _, _ = chirp_values(CHIRP_DURATION_S, q_mean, amplitudes, directions)
+    q_chirp_end, _, _ = chirp_values(
+        args.chirp_duration,
+        q_mean,
+        amplitudes,
+        directions,
+        args.chirp_duration,
+    )
     if elapsed < return_end:
         blend = minimum_jerk((elapsed - chirp_end) / args.transition_seconds)
         return q_chirp_end + blend * (q_mean - q_chirp_end), "return_to_crouch", float("nan"), float("nan")
@@ -654,7 +686,7 @@ def run_hardware(args, q_mean, amplitudes, directions):
         total_duration = (
             2.0 * args.transition_seconds
             + args.pre_chirp_hold_seconds
-            + CHIRP_DURATION_S
+            + args.chirp_duration
             + args.post_chirp_hold_seconds
         )
         sample_count = int(math.ceil(total_duration * CONTROL_HZ)) + 1
