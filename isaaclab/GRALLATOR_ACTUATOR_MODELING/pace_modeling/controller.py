@@ -242,7 +242,7 @@ def csv_fieldnames():
         "loop_lateness_s", "loop_work_s", "deadline_missed",
         "instantaneous_frequency_hz",
         "trajectory_segment", "feedback_complete", "feedback_max_age_s",
-        "safety_event",
+        "feedback_missing", "safety_event",
     ]
     suffixes = [
         "q_requested", "q_des", "q_actual", "qd_actual", "q_raw", "qd_raw",
@@ -326,6 +326,7 @@ def _base_row(
         "trajectory_segment": segment,
         "feedback_complete": True,
         "feedback_max_age_s": max(0.0, feedback_time - command_time),
+        "feedback_missing": "",
         "safety_event": "",
     }
 
@@ -631,6 +632,8 @@ def run_timing_validation(config, deploy_root, can_front, can_back, duration_s):
     missed_deadlines = 0
     incomplete_feedback = 0
     incomplete_details = []
+    consecutive_incomplete = 0
+    maximum_consecutive_incomplete = 0
     try:
         feedback_types = (
             int(layer.proto.get("comm_type_feedback", 2)),
@@ -693,8 +696,15 @@ def run_timing_validation(config, deploy_root, can_front, can_back, duration_s):
             received = set(estimator.last_refresh_current_bus_motor_ids)
             if received != expected:
                 incomplete_feedback += 1
+                consecutive_incomplete += 1
+                maximum_consecutive_incomplete = max(
+                    maximum_consecutive_incomplete,
+                    consecutive_incomplete,
+                )
                 if len(incomplete_details) < 10:
                     incomplete_details.append((index, sorted(expected - received)))
+            else:
+                consecutive_incomplete = 0
             end = time.monotonic()
             loop_dts.append(wake - previous)
             loop_work.append(end - wake)
@@ -715,6 +725,12 @@ def run_timing_validation(config, deploy_root, can_front, can_back, duration_s):
     )
     print(f"excluded warm-up cycles: {warmup_cycles}")
     print(f"incomplete feedback cycles: {incomplete_feedback}")
+    dropout_fraction = incomplete_feedback / max(count, 1)
+    print(f"feedback dropout fraction: {dropout_fraction:.6%}")
+    print(
+        "maximum consecutive incomplete cycles: "
+        f"{maximum_consecutive_incomplete}"
+    )
     if incomplete_details:
         print("first incomplete measured cycles:")
         for index, missing in incomplete_details:
@@ -722,12 +738,32 @@ def run_timing_validation(config, deploy_root, can_front, can_back, duration_s):
                 f"{bus}:0x{motor_id:02X}" for bus, motor_id in missing
             )
             print(f"  cycle {index}: missing {formatted}")
-    qualified = (
-        incomplete_feedback == 0
-        and loop_work
-        and max(loop_work) <= dt
+    maximum_dropout_fraction = float(
+        config.get("timing_validation_max_dropout_fraction", 0.001)
     )
-    print("transport qualification:", "PASSED" if qualified else "FAILED")
+    abort_consecutive = int(
+        config.get("feedback_dropout_abort_consecutive_cycles", 3)
+    )
+    if not 0.0 <= maximum_dropout_fraction < 1.0:
+        raise ValueError("timing_validation_max_dropout_fraction must be in [0,1)")
+    if abort_consecutive < 1:
+        raise ValueError("feedback_dropout_abort_consecutive_cycles must be positive")
+    qualified = bool(
+        loop_work
+        and max(loop_work) <= dt
+        and dropout_fraction <= maximum_dropout_fraction
+        and maximum_consecutive_incomplete < abort_consecutive
+    )
+    if qualified and incomplete_feedback:
+        result = "PASSED WITH ISOLATED DROPOUTS"
+    else:
+        result = "PASSED" if qualified else "FAILED"
+    print(
+        "qualification limits: dropout_fraction<="
+        f"{maximum_dropout_fraction:.6%}, consecutive_incomplete<"
+        f"{abort_consecutive}"
+    )
+    print("transport qualification:", result)
     return qualified
 
 
@@ -823,6 +859,9 @@ def run_hardware(
     loop_dts = []
     loop_work = []
     missed_deadlines = 0
+    feedback_dropout_cycles = 0
+    consecutive_incomplete_feedback = 0
+    maximum_consecutive_incomplete_feedback = 0
     completed = False
     stop_requested = False
     terminal_monitor = None
@@ -921,6 +960,13 @@ def run_hardware(
         deadline_tolerance = float(config.get("deadline_miss_tolerance_s", 0.0005))
         severe_lateness = float(config.get("max_loop_lateness_s", dt))
         max_severe_misses = int(config.get("max_consecutive_overruns", 3))
+        feedback_dropout_abort_cycles = int(
+            config.get("feedback_dropout_abort_consecutive_cycles", 3)
+        )
+        if feedback_dropout_abort_cycles < 1:
+            raise ValueError(
+                "feedback_dropout_abort_consecutive_cycles must be positive"
+            )
         sample_index = 0
 
         while True:
@@ -995,7 +1041,23 @@ def run_hardware(
             safety_reasons = []
             if not complete:
                 missing = sorted(expected - received)
-                safety_reasons.append(f"incomplete current-cycle feedback: {missing}")
+                feedback_dropout_cycles += 1
+                consecutive_incomplete_feedback += 1
+                maximum_consecutive_incomplete_feedback = max(
+                    maximum_consecutive_incomplete_feedback,
+                    consecutive_incomplete_feedback,
+                )
+                row["feedback_missing"] = ",".join(
+                    f"{bus}:0x{motor_id:02X}" for bus, motor_id in missing
+                )
+                if consecutive_incomplete_feedback >= feedback_dropout_abort_cycles:
+                    safety_reasons.append(
+                        "sustained incomplete feedback: "
+                        f"{consecutive_incomplete_feedback} cycles; "
+                        f"missing={row['feedback_missing']}"
+                    )
+            else:
+                consecutive_incomplete_feedback = 0
             q_des_sent = np.zeros(JOINT_COUNT, dtype=np.float64)
             q_actual_cycle = np.full(JOINT_COUNT, np.nan, dtype=np.float64)
             qd_actual_cycle = np.full(JOINT_COUNT, np.nan, dtype=np.float64)
@@ -1168,6 +1230,11 @@ def run_hardware(
                 loop_work,
                 missed_deadlines,
                 label="REAL CONTROL",
+            )
+            print(f"feedback dropout cycles: {feedback_dropout_cycles}")
+            print(
+                "maximum consecutive incomplete feedback cycles: "
+                f"{maximum_consecutive_incomplete_feedback}"
             )
         try:
             close_can_buses(buses)

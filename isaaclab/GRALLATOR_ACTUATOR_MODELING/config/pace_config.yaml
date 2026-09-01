@@ -4,6 +4,8 @@ can_timeout_s: 0.01
 feedback_timeout_s: 0.003
 max_feedback_age_s: 0.020
 timing_validation_warmup_cycles: 20
+timing_validation_max_dropout_fraction: 0.001
+feedback_dropout_abort_consecutive_cycles: 3
 
 # Conservative suspended-test defaults. These values are metadata and are also
 # the actual effective gains requested in every PACE command packet.

@@ -121,6 +121,14 @@ python3 -m pace_modeling \
 
 This mode never enables a motor and reports achieved rate, jitter, worst loop
 duration, deadline misses, incomplete feedback cycles, and pass/fail status.
+Qualification permits only the configured low fraction of isolated feedback
+gaps. Three consecutive incomplete windows still fail by default, and any
+measured loop duration above the 5 ms deadline fails.
+
+During a real experiment, isolated incomplete windows remain visible in the
+debug CSV and use only feedback that is still inside the configured freshness
+limit. They are omitted from `chirp_data.pt` rather than exporting a held value
+as a new measurement. Sustained loss safely aborts the experiment.
 
 ## Real suspended test
 
