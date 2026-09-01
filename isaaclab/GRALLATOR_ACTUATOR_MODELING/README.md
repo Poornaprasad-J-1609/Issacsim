@@ -158,11 +158,16 @@ python3 -m pace_modeling \
 ```
 
 The Stage 1 override is explicit because a `0.25 rad`, `0.5 Hz` sinusoid
-requires `0.785 rad/s`. It does not alter physical joint, torque, feedback,
-temperature, or tracking-error limits. The first minimum-jerk entry may begin
+requires `0.785 rad/s`. The command-rate override does not alter torque,
+feedback, temperature, or tracking-error limits. The first minimum-jerk entry may begin
 slightly outside the preferred trajectory envelope only when the measured pose
 is within `0.02 rad` of the physical hard limit and every subsequent entry
 sample moves inward.
+
+The PACE-only suspended-test hip range is `[-0.60,+0.60] rad`, with the
+trajectory envelope held to `[-0.58,+0.58] rad`. The deployment controller's
+`joint_limits.yaml` remains unchanged at `[-0.50,+0.50] rad`; its values are
+retained as the calibration-contract reference.
 
 The program first polls all 12 encoders while disabled, prints the measured
 starting pose, and requires the exact phrase `ENABLE PACE` before enabling.

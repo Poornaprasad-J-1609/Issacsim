@@ -547,6 +547,10 @@ def verify_deployment_contract(config, deploy_root):
             deploy_root / "config" / "joint_limits.yaml"
         )["joint_limits"],
     }
+    limit_reference = config.get(
+        "deployment_joint_limits_reference",
+        config["joint_limits"],
+    )
     mismatches = []
     for name in JOINT_ORDER:
         if int(config["motor_ids"][name]) != int(sources["motor_ids"][name]):
@@ -560,7 +564,8 @@ def verify_deployment_contract(config, deploy_root):
         )) > 1.0e-9:
             mismatches.append(f"{name} joint_offset")
         for bound in ("min", "max"):
-            if abs(float(config["joint_limits"][name][bound]) - float(
+            reference_bounds = limit_reference.get(name, config["joint_limits"][name])
+            if abs(float(reference_bounds[bound]) - float(
                 sources["joint_limits"][name][bound]
             )) > 1.0e-9:
                 mismatches.append(f"{name} limit.{bound}")

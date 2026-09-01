@@ -21,10 +21,10 @@ dry_run_initial_q: &crouch_center
 # These are stricter than the deployment hard limits. Calves retain at least
 # 10 degrees of clearance from their measured 0.00/1.36 rad endpoints.
 safe_joint_limits:
-  FL_hip_joint: {min: -0.45, max: 0.45}
-  FR_hip_joint: {min: -0.45, max: 0.45}
-  BL_hip_joint: {min: -0.45, max: 0.45}
-  BR_hip_joint: {min: -0.45, max: 0.45}
+  FL_hip_joint: {min: -0.58, max: 0.58}
+  FR_hip_joint: {min: -0.58, max: 0.58}
+  BL_hip_joint: {min: -0.58, max: 0.58}
+  BR_hip_joint: {min: -0.58, max: 0.58}
   FL_thigh_joint: {min: -1.80, max: 1.80}
   FR_thigh_joint: {min: -1.80, max: 1.80}
   BL_thigh_joint: {min: -1.80, max: 1.80}

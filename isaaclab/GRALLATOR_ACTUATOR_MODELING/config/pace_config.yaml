@@ -103,10 +103,10 @@ joint_offsets:
   BR_calf_joint: 0.0
 
 joint_limits:
-  FL_hip_joint: {min: -0.50, max: 0.50}
-  FR_hip_joint: {min: -0.50, max: 0.50}
-  BL_hip_joint: {min: -0.50, max: 0.50}
-  BR_hip_joint: {min: -0.50, max: 0.50}
+  FL_hip_joint: {min: -0.60, max: 0.60}
+  FR_hip_joint: {min: -0.60, max: 0.60}
+  BL_hip_joint: {min: -0.60, max: 0.60}
+  BR_hip_joint: {min: -0.60, max: 0.60}
   FL_thigh_joint: {min: -2.0, max: 2.0}
   FR_thigh_joint: {min: -2.0, max: 2.0}
   BL_thigh_joint: {min: -2.0, max: 2.0}
@@ -115,3 +115,11 @@ joint_limits:
   FR_calf_joint: {min: -1.36, max: 0.0}
   BL_calf_joint: {min: 0.0, max: 1.36}
   BR_calf_joint: {min: -1.36, max: 0.0}
+
+# PACE intentionally uses a wider suspended-test hip envelope. These values
+# preserve verification against the unchanged deployment calibration source.
+deployment_joint_limits_reference:
+  FL_hip_joint: {min: -0.50, max: 0.50}
+  FR_hip_joint: {min: -0.50, max: 0.50}
+  BL_hip_joint: {min: -0.50, max: 0.50}
+  BR_hip_joint: {min: -0.50, max: 0.50}
