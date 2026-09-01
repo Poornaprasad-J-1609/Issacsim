@@ -15,7 +15,7 @@ from pace_modeling.controller import (
     validate_requested_trajectory,
     verify_deployment_contract,
 )
-from pace_modeling.trajectory import build_trajectory
+from pace_modeling.trajectory import build_trajectory, compile_trajectory
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -24,9 +24,9 @@ ROOT = Path(__file__).resolve().parents[1]
 class TrajectoryTests(unittest.TestCase):
     def test_exact_20_second_sample_count(self):
         spec = load_yaml(ROOT / "trajectories" / "dataset_A_chirp_20s.yaml")
-        samples = build_trajectory(spec, np.zeros(12), expected_hz=50.0)
-        self.assertEqual(len(samples), 1000)
-        self.assertAlmostEqual(samples[1].time_s - samples[0].time_s, 0.02)
+        samples = build_trajectory(spec, np.zeros(12), expected_hz=200.0)
+        self.assertEqual(len(samples), 4000)
+        self.assertAlmostEqual(samples[1].time_s - samples[0].time_s, 0.005)
 
     def test_required_joint_order(self):
         self.assertEqual(JOINT_ORDER[:4], [
@@ -43,11 +43,11 @@ class TrajectoryTests(unittest.TestCase):
         actual = np.zeros(12)
         velocity = np.zeros(12)
         sent = final_command_target(
-            requested, previous, actual, velocity, config, 0.02
+            requested, previous, actual, velocity, config, 0.005
         )
-        self.assertAlmostEqual(sent[0], 0.008, places=7)
-        self.assertAlmostEqual(sent[4], 0.012, places=7)
-        self.assertAlmostEqual(sent[8], 0.012, places=7)
+        self.assertAlmostEqual(sent[0], 0.002, places=7)
+        self.assertAlmostEqual(sent[4], 0.003, places=7)
+        self.assertAlmostEqual(sent[8], 0.003, places=7)
         self.assertEqual(sent[9], 0.0)  # right calf positive request hits max=0
 
     def test_pace_calibration_matches_deployment(self):
@@ -62,11 +62,11 @@ class TrajectoryTests(unittest.TestCase):
         initial = np.array([
             float(spec["dry_run_initial_q"][name]) for name in JOINT_ORDER
         ])
-        samples = build_trajectory(spec, initial, expected_hz=50.0)
-        self.assertEqual(len(samples), 1550)
+        samples = build_trajectory(spec, initial, expected_hz=200.0)
+        self.assertEqual(len(samples), 6200)
         chirp = [sample for sample in samples
                  if sample.segment == "all_joints_slow_chirp"]
-        self.assertEqual(len(chirp), 1000)
+        self.assertEqual(len(chirp), 4000)
         self.assertAlmostEqual(chirp[0].instantaneous_frequency_hz, 0.1)
         self.assertGreater(chirp[-1].instantaneous_frequency_hz, 0.499)
         validate_requested_trajectory(config, spec, samples)
@@ -76,17 +76,19 @@ class TrajectoryTests(unittest.TestCase):
     def test_minimum_jerk_reaches_target(self):
         target = {name: 0.1 for name in JOINT_ORDER}
         spec = {
-            "control_hz": 50.0,
+            "control_hz": 200.0,
             "segments": [{
                 "name": "move", "type": "minimum_jerk",
                 "duration_s": 1.0, "target": target,
             }],
         }
-        samples = build_trajectory(spec, np.zeros(12), expected_hz=50.0)
-        self.assertEqual(len(samples), 50)
-        np.testing.assert_allclose(samples[-1].q_requested, 0.1, atol=1.0e-12)
-        expected_first_alpha = 10 * 0.02**3 - 15 * 0.02**4 + 6 * 0.02**5
-        self.assertAlmostEqual(samples[0].q_requested[0], 0.1 * expected_first_alpha)
+        plan = compile_trajectory(spec, np.zeros(12), expected_hz=200.0)
+        samples = build_trajectory(spec, np.zeros(12), expected_hz=200.0)
+        self.assertEqual(len(samples), 200)
+        np.testing.assert_allclose(samples[0].q_requested, 0.0, atol=1.0e-12)
+        np.testing.assert_allclose(
+            plan.evaluate(1.0).q_requested, 0.1, atol=1.0e-12
+        )
 
     def test_limiter_diagnostics_identify_each_stage(self):
         config = load_yaml(ROOT / "config" / "pace_config.yaml")
@@ -97,7 +99,7 @@ class TrajectoryTests(unittest.TestCase):
             np.zeros(12),
             np.zeros(12),
             config,
-            0.02,
+            0.005,
             return_diagnostics=True,
         )
         self.assertTrue(np.all(diagnostics["hard_limit_active"]))
@@ -115,6 +117,34 @@ class TrajectoryTests(unittest.TestCase):
             np.asarray([JOINT_ORDER.index(name) for name in PACE_EXPORT_ORDER]),
         )
         self.assertEqual(tuple(exported), PACE_EXPORT_INDICES)
+
+    def test_linear_chirp_uses_actual_elapsed_time_formula(self):
+        spec = load_yaml(
+            ROOT / "trajectories" / "grallator_all_joints_slow_chirp.yaml"
+        )
+        initial = np.array([
+            float(spec["dry_run_initial_q"][name]) for name in JOINT_ORDER
+        ])
+        plan = compile_trajectory(spec, initial, expected_hz=200.0)
+        elapsed = 6.0 + 7.123
+        sample = plan.evaluate(elapsed)
+        local_time = 7.123
+        f_start, f_end, duration = 0.1, 0.5, 20.0
+        slope = (f_end - f_start) / duration
+        phase = 2.0 * np.pi * (
+            f_start * local_time + 0.5 * slope * local_time**2
+        )
+        center = initial
+        amplitude = np.array([
+            float(spec["segments"][2]["amplitude"][name]) for name in JOINT_ORDER
+        ])
+        np.testing.assert_allclose(
+            sample.q_requested, center + amplitude * np.sin(phase), atol=1.0e-12
+        )
+        self.assertAlmostEqual(
+            sample.instantaneous_frequency_hz,
+            f_start + slope * local_time,
+        )
 
 
 if __name__ == "__main__":

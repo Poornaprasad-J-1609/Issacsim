@@ -1,13 +1,15 @@
-"""50 Hz PACE hardware and dry-run controller."""
+"""Configured-rate PACE hardware and dry-run controller."""
 
 from __future__ import annotations
 
 import json
 import math
 import os
+import queue
 import signal
 import subprocess
 import sys
+import threading
 import time
 from datetime import datetime
 from pathlib import Path
@@ -22,7 +24,7 @@ from .constants import (
     to_pace_order,
 )
 from .data_logger import PaceDataLogger
-from .trajectory import joint_vector, load_trajectory
+from .trajectory import compile_trajectory, joint_vector, load_trajectory
 
 
 def load_yaml(path):
@@ -161,7 +163,7 @@ def validate_requested_trajectory(config, trajectory_spec, samples):
     return q_min, q_max
 
 
-def trajectory_report(trajectory_spec, samples, control_hz=50.0):
+def trajectory_report(trajectory_spec, samples, control_hz=200.0):
     requested = np.stack([sample.q_requested for sample in samples])
     dt = 1.0 / float(control_hz)
     numerical_velocity = np.zeros_like(requested)
@@ -236,12 +238,15 @@ def save_pace_dataset(path, times, q_des, q_actual):
 def csv_fieldnames():
     fields = [
         "sample_index", "time_s", "nominal_time_s", "command_time_s",
-        "feedback_time_s", "control_dt_s", "loop_lateness_s",
+        "feedback_time_s", "control_dt_s", "loop_frequency_hz",
+        "loop_lateness_s", "loop_work_s", "deadline_missed",
+        "instantaneous_frequency_hz",
         "trajectory_segment", "feedback_complete", "feedback_max_age_s",
         "safety_event",
     ]
     suffixes = [
         "q_requested", "q_des", "q_actual", "qd_actual", "q_raw", "qd_raw",
+        "tracking_error",
         "limiter_delta", "limiter_abs_delta", "hard_limit_active",
         "rate_limit_active", "torque_budget_limit_active",
         "kp", "kd", "v_des", "tau_ff", "motor_id", "bus",
@@ -274,12 +279,13 @@ def make_output_paths(output_root, dataset_name, dry_run):
 
 
 def metadata(config, trajectory_spec, config_path, trajectory_path, deploy_root, dry_run):
+    control_hz = float(config["control_hz"])
     return {
-        "format": "grallator_pace_v1",
+        "format": "grallator_pace_v2",
         "created_at": datetime.now().isoformat(),
         "dry_run": bool(dry_run),
-        "control_rate_hz": 50.0,
-        "control_dt_s": 0.02,
+        "control_rate_hz": control_hz,
+        "control_dt_s": 1.0 / control_hz,
         "joint_order": JOINT_ORDER,
         "internal_joint_order": JOINT_ORDER,
         "pace_export_order": PACE_EXPORT_ORDER,
@@ -288,7 +294,7 @@ def metadata(config, trajectory_spec, config_path, trajectory_path, deploy_root,
         "q_raw_definition": "mechanical position from MIT operation-status feedback (communication type 2)",
         "qd_raw_definition": "mechanical velocity from MIT operation-status feedback (communication type 2)",
         "parameter_read_note": "0x7019/0x701B parameter reads are not mixed into active MIT streaming",
-        "feedback_pairing": "each row pairs one 50 Hz command batch with operation-status replies received after that batch",
+        "feedback_pairing": "each row uses the latest complete feedback read before that cycle's command",
         "config_path": str(Path(config_path).resolve()),
         "trajectory_path": str(Path(trajectory_path).resolve()),
         "deploy_root": str(Path(deploy_root).resolve()) if deploy_root else None,
@@ -298,7 +304,10 @@ def metadata(config, trajectory_spec, config_path, trajectory_path, deploy_root,
     }
 
 
-def _base_row(index, nominal_time, command_time, feedback_time, dt, lateness, segment):
+def _base_row(
+    index, nominal_time, command_time, feedback_time, dt, lateness, work_s,
+    deadline_missed, segment, instantaneous_frequency_hz,
+):
     return {
         "sample_index": index,
         "time_s": command_time,
@@ -306,7 +315,14 @@ def _base_row(index, nominal_time, command_time, feedback_time, dt, lateness, se
         "command_time_s": command_time,
         "feedback_time_s": feedback_time,
         "control_dt_s": dt,
+        "loop_frequency_hz": 1.0 / dt if dt > 0.0 else float("nan"),
         "loop_lateness_s": lateness,
+        "loop_work_s": work_s,
+        "deadline_missed": bool(deadline_missed),
+        "instantaneous_frequency_hz": (
+            "" if instantaneous_frequency_hz is None
+            else float(instantaneous_frequency_hz)
+        ),
         "trajectory_segment": segment,
         "feedback_complete": True,
         "feedback_max_age_s": max(0.0, feedback_time - command_time),
@@ -314,11 +330,35 @@ def _base_row(index, nominal_time, command_time, feedback_time, dt, lateness, se
     }
 
 
+def timing_summary(control_hz, loop_dts, loop_work, missed_deadlines, label="CONTROL"):
+    dts = np.asarray(loop_dts, dtype=np.float64)
+    work = np.asarray(loop_work, dtype=np.float64)
+    valid = dts[np.isfinite(dts) & (dts > 0.0)]
+    if valid.size == 0:
+        print(f"\n{label} TIMING SUMMARY: no valid cycles")
+        return
+    frequencies = 1.0 / valid
+    print(f"\n{label} TIMING SUMMARY")
+    print(f"requested control rate : {control_hz:.3f} Hz")
+    print(f"target dt              : {1000.0 / control_hz:.3f} ms")
+    print(f"achieved mean rate     : {1.0 / valid.mean():.3f} Hz")
+    print(f"minimum rate           : {frequencies.min():.3f} Hz")
+    print(f"maximum rate           : {frequencies.max():.3f} Hz")
+    print(f"mean dt                : {1000.0 * valid.mean():.3f} ms")
+    print(f"dt jitter std          : {1000.0 * valid.std():.3f} ms")
+    print(f"worst dt               : {1000.0 * valid.max():.3f} ms")
+    print(f"worst loop duration    : {1000.0 * work.max():.3f} ms")
+    print(f"missed deadlines       : {int(missed_deadlines)}")
+
+
 def run_dry(config, config_path, trajectory_path, output_root, dataset_name, initial_q):
-    dt = 0.02
-    trajectory_spec, samples = load_trajectory(trajectory_path, initial_q, expected_hz=50.0)
+    control_hz = float(config["control_hz"])
+    dt = 1.0 / control_hz
+    trajectory_spec, samples = load_trajectory(
+        trajectory_path, initial_q, expected_hz=control_hz
+    )
     validate_requested_trajectory(config, trajectory_spec, samples)
-    trajectory_report(trajectory_spec, samples, control_hz=50.0)
+    trajectory_report(trajectory_spec, samples, control_hz=control_hz)
     csv_path = make_output_paths(output_root, dataset_name, dry_run=True)
     logger = PaceDataLogger(
         csv_path,
@@ -346,6 +386,8 @@ def run_dry(config, config_path, trajectory_path, output_root, dataset_name, ini
     excessive_cycles = 0
     maximum_excessive_cycles = 0
     warned = False
+    mock_time_constant_s = 0.1007
+    mock_alpha = 1.0 - math.exp(-dt / mock_time_constant_s)
     try:
         for sample in samples:
             q_des, diagnostics = final_command_target(
@@ -371,19 +413,21 @@ def run_dry(config, config_path, trajectory_path, output_root, dataset_name, ini
             else:
                 excessive_cycles = 0
             old_q = q_actual.copy()
-            q_actual += 0.18 * (q_des - q_actual)
+            q_actual += mock_alpha * (q_des - q_actual)
             qd_actual = (q_actual - old_q) / dt
             q_raw = offsets + directions * q_actual
             qd_raw = directions * qd_actual
             row = _base_row(
                 sample.index, sample.time_s, sample.time_s, sample.time_s + 0.001,
-                dt, 0.0, sample.segment,
+                dt, 0.0, 0.0, False, sample.segment,
+                sample.instantaneous_frequency_hz,
             )
             for i, name in enumerate(JOINT_ORDER):
                 values = {
                     "q_requested": sample.q_requested[i], "q_des": q_des[i],
                     "q_actual": q_actual[i], "qd_actual": qd_actual[i],
                     "q_raw": q_raw[i], "qd_raw": qd_raw[i], "kp": kp[i],
+                    "tracking_error": q_des[i] - q_actual[i],
                     "limiter_delta": diagnostics["limiter_delta"][i],
                     "limiter_abs_delta": diagnostics["limiter_abs_delta"][i],
                     "hard_limit_active": bool(diagnostics["hard_limit_active"][i]),
@@ -426,6 +470,13 @@ def run_dry(config, config_path, trajectory_path, output_root, dataset_name, ini
     else:
         print("Limiter distortion abort check: PASS")
     print(f"PACE tensor dataset: {pace_path}")
+    timing_summary(
+        control_hz,
+        [dt] * len(samples),
+        [0.0] * len(samples),
+        0,
+        label="DRY-RUN CONTROL",
+    )
     return csv_path, len(samples)
 
 
@@ -478,7 +529,10 @@ def verify_deployment_contract(config, deploy_root):
         )
 
 
-def print_terminal_monitor(sample, q_requested, q_des, q_actual, qd_actual, diagnostics):
+def print_terminal_monitor(
+    sample, q_requested, q_des, q_actual, qd_actual, diagnostics,
+    limiter_warning_delta_rad,
+):
     tracking = q_des - q_actual
     limiter_delta = q_des - q_requested
     active = []
@@ -495,6 +549,11 @@ def print_terminal_monitor(sample, q_requested, q_des, q_actual, qd_actual, diag
     frequency = sample.instantaneous_frequency_hz
     frequency_text = "n/a" if frequency is None else f"{frequency:.3f} Hz"
     print("\nPACE STATUS")
+    if np.max(np.abs(limiter_delta)) > limiter_warning_delta_rad:
+        print(
+            "WARNING: q_des differs from q_requested by more than "
+            f"{limiter_warning_delta_rad:.4f} rad"
+        )
     print(
         f"segment={sample.segment} segment_t={sample.segment_time_s:.2f}s "
         f"frequency={frequency_text} "
@@ -511,13 +570,145 @@ def print_terminal_monitor(sample, q_requested, q_des, q_actual, qd_actual, diag
         )
 
 
+class AsyncTerminalMonitor:
+    """Best-effort low-rate terminal output isolated from the control loop."""
+
+    def __init__(self):
+        self.queue = queue.Queue(maxsize=1)
+        self.thread = threading.Thread(target=self._run, name="PaceTerminal", daemon=True)
+        self.thread.start()
+
+    def submit(self, args):
+        try:
+            self.queue.put_nowait(args)
+        except queue.Full:
+            pass
+
+    def _run(self):
+        while True:
+            args = self.queue.get()
+            if args is None:
+                return
+            print_terminal_monitor(*args)
+
+    def close(self):
+        try:
+            self.queue.put_nowait(None)
+        except queue.Full:
+            try:
+                self.queue.get_nowait()
+            except queue.Empty:
+                pass
+            self.queue.put_nowait(None)
+        self.thread.join(timeout=2.0)
+
+
+def run_timing_validation(config, deploy_root, can_front, can_back, duration_s):
+    """Qualify passive two-adapter stop/poll transport without enabling motors."""
+    MotorCommandLayer, Estimator, open_can_buses, close_can_buses = _import_deployment(
+        deploy_root
+    )
+    verify_deployment_contract(config, deploy_root)
+    control_hz = float(config["control_hz"])
+    dt = 1.0 / control_hz
+    motor_ids = {name: int(config["motor_ids"][name]) for name in JOINT_ORDER}
+    routing = {name: str(config["joint_can_bus"][name]) for name in JOINT_ORDER}
+    layer = MotorCommandLayer(JOINT_ORDER, motor_ids, joint_can_bus=routing)
+    layer.joint_directions = {
+        name: float(config["motor_directions"][name]) for name in JOINT_ORDER
+    }
+    layer.joint_offsets = {
+        name: float(config["joint_offsets"][name]) for name in JOINT_ORDER
+    }
+    buses = open_can_buses(
+        {"front": str(can_front), "back": str(can_back)},
+        backend="socketcan",
+        bitrate=int(config.get("can_bitrate", 1_000_000)),
+        timeout=float(config.get("can_timeout_s", 0.01)),
+    )
+    loop_dts = []
+    loop_work = []
+    missed_deadlines = 0
+    incomplete_feedback = 0
+    try:
+        feedback_types = (
+            int(layer.proto.get("comm_type_feedback", 2)),
+            int(layer.proto.get("comm_type_active_feedback", 24)),
+        )
+        seen = set()
+        for bus in buses.values():
+            if id(bus) in seen:
+                continue
+            seen.add(id(bus))
+            bus.configure_feedback_filters(feedback_types)
+        estimator = Estimator(
+            q_initial=np.zeros(JOINT_COUNT, dtype=np.float32),
+            policy_order=JOINT_ORDER,
+            motor_ids=motor_ids,
+            motor_layer=layer,
+            bus=buses,
+            joint_velocity_source="mit",
+        )
+        expected = estimator.expected_feedback_bus_motor_ids()
+        feedback_timeout = float(config.get("feedback_timeout_s", 0.003))
+        tolerance = float(config.get("deadline_miss_tolerance_s", 0.0005))
+        count = int(round(float(duration_s) * control_hz))
+        start = time.monotonic()
+        previous = start - dt
+        for index in range(count):
+            deadline = start + index * dt
+            wait = deadline - time.monotonic()
+            if wait > 0.0:
+                time.sleep(wait)
+            wake = time.monotonic()
+            if wake - deadline > tolerance:
+                missed_deadlines += 1
+            layer.send_raw_commands(buses, layer.build_feedback_poll_commands())
+            estimator.mark_command_sent(time.monotonic())
+            estimator.refresh_from_bus(
+                timeout=feedback_timeout,
+                expected_bus_motor_ids=expected,
+            )
+            if set(estimator.last_refresh_current_bus_motor_ids) != expected:
+                incomplete_feedback += 1
+            end = time.monotonic()
+            loop_dts.append(wake - previous)
+            loop_work.append(end - wake)
+            previous = wake
+    finally:
+        try:
+            for _ in range(3):
+                layer.send_raw_commands(buses, layer.build_stop_commands())
+                time.sleep(max(dt, 0.01))
+        finally:
+            close_can_buses(buses)
+    timing_summary(
+        control_hz,
+        loop_dts,
+        loop_work,
+        missed_deadlines,
+        label="PASSIVE TWO-CAN",
+    )
+    print(f"incomplete feedback cycles: {incomplete_feedback}")
+    qualified = (
+        incomplete_feedback == 0
+        and loop_work
+        and max(loop_work) <= dt
+    )
+    print("transport qualification:", "PASSED" if qualified else "FAILED")
+    return qualified
+
+
 def run_hardware(
     config, config_path, trajectory_path, output_root, dataset_name,
     deploy_root, can_front, can_back,
 ):
     MotorCommandLayer, Estimator, open_can_buses, close_can_buses = _import_deployment(deploy_root)
     verify_deployment_contract(config, deploy_root)
-    dt = 0.02
+    control_hz = float(config["control_hz"])
+    if control_hz <= 0.0:
+        raise ValueError("control_hz must be positive")
+    dt = 1.0 / control_hz
     motor_ids = {name: int(config["motor_ids"][name]) for name in JOINT_ORDER}
     routing = {name: str(config["joint_can_bus"][name]) for name in JOINT_ORDER}
     ports = {"front": str(can_front), "back": str(can_back)}
@@ -597,8 +788,12 @@ def run_hardware(
     pace_times = []
     pace_q_des = []
     pace_q_actual = []
+    loop_dts = []
+    loop_work = []
+    missed_deadlines = 0
     completed = False
     stop_requested = False
+    terminal_monitor = None
 
     def request_stop(_signal=None, _frame=None):
         nonlocal stop_requested
@@ -610,7 +805,7 @@ def run_hardware(
         # Passive feedback acquisition: stop/poll frames cannot move the motors.
         for _ in range(10):
             layer.send_raw_commands(buses, layer.build_feedback_poll_commands())
-            time.sleep(0.02)
+            time.sleep(max(dt, 0.01))
             estimator.refresh_from_bus(timeout=feedback_timeout, expected_bus_motor_ids=expected)
             if len(estimator.last_feedback_by_joint) == JOINT_COUNT:
                 break
@@ -620,10 +815,13 @@ def run_hardware(
 
         initial_q = np.asarray(estimator.q_current, dtype=np.float64).copy()
         trajectory_spec, samples = load_trajectory(
-            trajectory_path, initial_q, expected_hz=50.0
+            trajectory_path, initial_q, expected_hz=control_hz
+        )
+        trajectory_plan = compile_trajectory(
+            trajectory_spec, initial_q, expected_hz=control_hz
         )
         validate_requested_trajectory(config, trajectory_spec, samples)
-        trajectory_report(trajectory_spec, samples, control_hz=50.0)
+        trajectory_report(trajectory_spec, samples, control_hz=control_hz)
         warning_delta = float(config.get("limiter_warning_delta_rad", 0.005))
         abort_delta = float(config.get("limiter_abort_delta_rad", 0.03))
         abort_cycles = int(config.get("limiter_abort_consecutive_cycles", 5))
@@ -632,13 +830,13 @@ def run_hardware(
             raise ValueError("limiter thresholds require 0 <= warning < abort")
         if abort_cycles < 1:
             raise ValueError("limiter_abort_consecutive_cycles must be positive")
-        if status_hz <= 0.0 or status_hz > 50.0:
-            raise ValueError("terminal_status_hz must be in (0, 50]")
-        status_interval = max(1, int(round(50.0 / status_hz)))
+        if status_hz <= 0.0 or status_hz > control_hz:
+            raise ValueError("terminal_status_hz must be in (0, control_hz]")
+        status_interval = max(1, int(round(control_hz / status_hz)))
         print("\nPACE REAL-HARDWARE TEST")
         print("Internal joint order:", ", ".join(JOINT_ORDER))
         print("PACE export order:", ", ".join(PACE_EXPORT_ORDER))
-        print("Samples:", len(samples), "Duration:", len(samples) * dt, "s")
+        print("Samples:", len(samples), "Duration:", trajectory_plan.duration_s, "s")
         print("Initial q:", np.array2string(initial_q, precision=4))
         print("The robot must be suspended and the area clear.")
         confirmation = input("Type ENABLE PACE to enable all motors: ").strip()
@@ -653,6 +851,24 @@ def run_hardware(
         # generated after its own MIT command batch.
         estimator.refresh_from_bus(timeout=0.0, expected_bus_motor_ids=expected)
 
+        # One position-hold command at the measured pose establishes the first
+        # complete enabled feedback snapshot without introducing a position step.
+        warmup_commands = layer.build_mit_commands(
+            initial_q,
+            phase="policy",
+            feedback_by_joint=estimator.last_feedback_by_joint,
+        )
+        warmup_send = time.monotonic()
+        layer.send_raw_commands(buses, warmup_commands)
+        estimator.mark_command_sent(warmup_send)
+        time.sleep(dt)
+        estimator.refresh_from_bus(
+            timeout=feedback_timeout,
+            expected_bus_motor_ids=expected,
+        )
+        if set(estimator.last_refresh_current_bus_motor_ids) != expected:
+            raise RuntimeError("enabled warmup did not return complete motor feedback")
+
         csv_path = make_output_paths(output_root, dataset_name, dry_run=False)
         logger = PaceDataLogger(
             csv_path,
@@ -662,31 +878,58 @@ def run_hardware(
                 deploy_root, False,
             ),
         )
+        terminal_monitor = AsyncTerminalMonitor()
         q_des_previous = initial_q.copy()
         start = time.monotonic()
-        previous_cycle = start
-        consecutive_overruns = 0
+        previous_control_timestamp = start - dt
+        consecutive_severe_misses = 0
         consecutive_limiter_distortion = 0
+        consecutive_tracking_error = 0
         last_limiter_warning_sample = -status_interval
+        deadline_tolerance = float(config.get("deadline_miss_tolerance_s", 0.0005))
+        severe_lateness = float(config.get("max_loop_lateness_s", dt))
+        max_severe_misses = int(config.get("max_consecutive_overruns", 3))
+        sample_index = 0
 
-        for sample in samples:
+        while True:
             if stop_requested:
                 raise RuntimeError("operator stop requested")
-            deadline = start + sample.index * dt
+            deadline = start + sample_index * dt
             wait = deadline - time.monotonic()
             if wait > 0.0:
                 time.sleep(wait)
-            cycle_start = time.monotonic()
-            actual_dt = cycle_start - previous_cycle if sample.index else dt
-            previous_cycle = cycle_start
-            lateness = max(0.0, cycle_start - deadline)
-            if lateness > float(config.get("max_loop_lateness_s", 0.010)):
-                consecutive_overruns += 1
+            cycle_wake = time.monotonic()
+            lateness = max(0.0, cycle_wake - deadline)
+            deadline_missed = lateness > deadline_tolerance
+            if deadline_missed:
+                missed_deadlines += 1
+            if lateness > severe_lateness:
+                consecutive_severe_misses += 1
             else:
-                consecutive_overruns = 0
-            if consecutive_overruns >= int(config.get("max_consecutive_overruns", 3)):
-                raise RuntimeError(f"control timing failed: lateness={lateness:.6f}s")
+                consecutive_severe_misses = 0
+            if consecutive_severe_misses >= max_severe_misses:
+                raise RuntimeError(
+                    "control timing failed: "
+                    f"lateness={lateness:.6f}s for "
+                    f"{consecutive_severe_misses} consecutive cycles"
+                )
 
+            # Read replies generated by the previous cycle before preparing the
+            # next command. Both adapter reads remain inside the deployment API.
+            if sample_index > 0:
+                estimator.refresh_from_bus(
+                    timeout=feedback_timeout,
+                    expected_bus_motor_ids=expected,
+                )
+            received = set(estimator.last_refresh_current_bus_motor_ids)
+            complete = received == expected
+            control_timestamp_abs = time.monotonic()
+            elapsed = control_timestamp_abs - start
+            if elapsed >= trajectory_plan.duration_s:
+                break
+            actual_dt = control_timestamp_abs - previous_control_timestamp
+            previous_control_timestamp = control_timestamp_abs
+            sample = trajectory_plan.evaluate(elapsed, index=sample_index)
             q_actual_before = np.asarray(estimator.q_current, dtype=np.float64).copy()
             qd_actual_before = np.asarray(estimator.qd_current, dtype=np.float64).copy()
             q_prepared, diagnostics = final_command_target(
@@ -702,23 +945,18 @@ def run_hardware(
             command_send_abs = time.monotonic()
             layer.send_raw_commands(buses, commands)
             estimator.mark_command_sent(command_send_abs)
-            estimator.refresh_from_bus(
-                timeout=feedback_timeout,
-                expected_bus_motor_ids=expected,
-            )
-            received = set(estimator.last_refresh_current_bus_motor_ids)
-            complete = received == expected
             feedback_by_joint = estimator.last_feedback_by_joint
             feedback_times = [
-                float(feedback_by_joint[name].get("timestamp", command_send_abs))
+                float(feedback_by_joint[name].get("timestamp", control_timestamp_abs))
                 for name in JOINT_ORDER if name in feedback_by_joint
             ]
-            feedback_abs = max(feedback_times, default=command_send_abs)
+            feedback_abs = max(feedback_times, default=control_timestamp_abs)
             command_time = command_send_abs - start
             feedback_time = feedback_abs - start
             row = _base_row(
-                sample.index, sample.time_s, command_time, feedback_time,
-                actual_dt, lateness, sample.segment,
+                sample_index, sample_index * dt, command_time, feedback_time,
+                actual_dt, lateness, 0.0, deadline_missed, sample.segment,
+                sample.instantaneous_frequency_hz,
             )
             row["feedback_complete"] = bool(complete)
 
@@ -733,7 +971,10 @@ def run_hardware(
                 cmd = command_by_joint[name]
                 fb = feedback_by_joint.get(name, {})
                 fb_abs = float(fb.get("timestamp", float("nan")))
-                fb_age = fb_abs - command_send_abs if math.isfinite(fb_abs) else float("nan")
+                fb_age = (
+                    control_timestamp_abs - fb_abs
+                    if math.isfinite(fb_abs) else float("nan")
+                )
                 fault_bits = int(fb.get("fault_bits", 0))
                 temperature = float(fb.get("temperature_c", float("nan")))
                 q_actual = float(fb.get("joint_position", float("nan")))
@@ -771,6 +1012,7 @@ def run_hardware(
                     "q_requested": sample.q_requested[i], "q_des": cmd["q_des"],
                     "q_actual": q_actual, "qd_actual": qd_actual,
                     "q_raw": q_raw, "qd_raw": qd_raw,
+                    "tracking_error": float(cmd["q_des"]) - q_actual,
                     "limiter_delta": float(cmd["q_des"]) - sample.q_requested[i],
                     "limiter_abs_delta": abs(
                         float(cmd["q_des"]) - sample.q_requested[i]
@@ -799,14 +1041,8 @@ def run_hardware(
             limiter_abs_delta = np.abs(q_des_sent - sample.q_requested)
             max_limiter_delta = float(np.max(limiter_abs_delta))
             if max_limiter_delta > warning_delta:
-                if sample.index - last_limiter_warning_sample >= status_interval:
-                    worst = int(np.argmax(limiter_abs_delta))
-                    print(
-                        "WARNING: limiter changed "
-                        f"{JOINT_ORDER[worst]} by {limiter_abs_delta[worst]:.6f} rad "
-                        f"at sample {sample.index}"
-                    )
-                    last_limiter_warning_sample = sample.index
+                if sample_index - last_limiter_warning_sample >= status_interval:
+                    last_limiter_warning_sample = sample_index
             if max_limiter_delta > abort_delta:
                 consecutive_limiter_distortion += 1
             else:
@@ -817,33 +1053,65 @@ def run_hardware(
                     f"max|q_des-q_requested|={max_limiter_delta:.6f}rad "
                     f"for {consecutive_limiter_distortion} cycles"
                 )
+            max_tracking_error = float(np.max(np.abs(q_des_sent - q_actual_cycle)))
+            if max_tracking_error > float(config["max_tracking_error_rad"]):
+                consecutive_tracking_error += 1
+            else:
+                consecutive_tracking_error = 0
+            if consecutive_tracking_error >= int(
+                config["max_tracking_error_consecutive_cycles"]
+            ):
+                safety_reasons.append(
+                    "sustained tracking error: "
+                    f"max|q_des-q_actual|={max_tracking_error:.6f}rad "
+                    f"for {consecutive_tracking_error} cycles"
+                )
+            cycle_end = time.monotonic()
+            work_s = cycle_end - cycle_wake
+            row["loop_work_s"] = work_s
             row["safety_event"] = "; ".join(safety_reasons)
             logger.write(row)
+            loop_dts.append(actual_dt)
+            loop_work.append(work_s)
             if not safety_reasons and complete and np.all(np.isfinite(q_actual_cycle)):
-                pace_times.append(command_time)
+                pace_times.append(control_timestamp_abs - start)
                 pace_q_des.append(q_des_sent.copy())
                 pace_q_actual.append(q_actual_cycle.copy())
-            if sample.index % status_interval == 0:
-                print_terminal_monitor(
-                    sample, sample.q_requested, q_des_sent,
-                    q_actual_cycle, qd_actual_cycle, diagnostics,
+            if sample_index % status_interval == 0:
+                terminal_monitor.submit(
+                    (
+                        sample,
+                        sample.q_requested.copy(),
+                        q_des_sent.copy(),
+                        q_actual_cycle.copy(),
+                        qd_actual_cycle.copy(),
+                        {key: value.copy() for key, value in diagnostics.items()},
+                        warning_delta,
+                    )
                 )
             q_des_previous = q_des_sent
             if safety_reasons:
                 raise RuntimeError(row["safety_event"])
+            sample_index += 1
 
         completed = True
-        return csv_path, len(samples)
+        return csv_path, sample_index
     finally:
         if enabled:
             try:
                 for _ in range(3):
                     layer.send_raw_commands(buses, layer.build_stop_commands())
-                    time.sleep(0.02)
+                    time.sleep(max(dt, 0.01))
             except Exception as exc:
                 print(f"WARNING: motor stop failed: {exc}", file=sys.stderr)
+        if terminal_monitor is not None:
+            terminal_monitor.close()
         if logger is not None:
-            logger.close()
+            try:
+                logger.close()
+            except Exception as exc:
+                completed = False
+                print(f"WARNING: buffered log write failed: {exc}", file=sys.stderr)
         if completed and csv_path is not None and pace_times:
             try:
                 pace_path = save_pace_dataset(
@@ -861,6 +1129,16 @@ def run_hardware(
                 "complete successfully.",
                 file=sys.stderr,
             )
-        close_can_buses(buses)
-        signal.signal(signal.SIGINT, old_sigint)
-        signal.signal(signal.SIGTERM, old_sigterm)
+        if loop_dts:
+            timing_summary(
+                control_hz,
+                loop_dts,
+                loop_work,
+                missed_deadlines,
+                label="REAL CONTROL",
+            )
+        try:
+            close_can_buses(buses)
+        finally:
+            signal.signal(signal.SIGINT, old_sigint)
+            signal.signal(signal.SIGTERM, old_sigterm)

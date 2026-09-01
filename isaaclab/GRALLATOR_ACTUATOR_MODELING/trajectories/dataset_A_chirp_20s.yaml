@@ -1,4 +1,4 @@
-control_hz: 50.0
+control_hz: 200.0
 description: "20 second, 1000-sample fitting example; small FL thigh chirp"
 segments:
   - name: move_to_safe_center
@@ -28,4 +28,3 @@ segments:
     type: hold
     duration_s: 2.0
     target: {}
-

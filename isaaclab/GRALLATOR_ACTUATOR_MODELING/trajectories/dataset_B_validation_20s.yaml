@@ -1,4 +1,4 @@
-control_hz: 50.0
+control_hz: 200.0
 description: "Different 20 second validation motion; not used for fitting"
 segments:
   - name: validation_center
@@ -43,4 +43,3 @@ segments:
     type: hold
     duration_s: 2.0
     target: {}
-

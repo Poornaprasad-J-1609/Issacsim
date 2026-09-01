@@ -9,7 +9,7 @@ from pathlib import Path
 import numpy as np
 
 from .constants import JOINT_COUNT
-from .controller import load_yaml, run_dry, run_hardware
+from .controller import load_yaml, run_dry, run_hardware, run_timing_validation
 from .trajectory import joint_vector
 
 
@@ -32,12 +32,12 @@ def default_deploy_root():
 
 def parser():
     result = argparse.ArgumentParser(
-        description="Grallator 50 Hz PACE actuator-modeling logger/controller"
+        description="Grallator configured-rate PACE actuator-modeling logger/controller"
     )
     result.add_argument(
         "--config", default=str(PROJECT_ROOT / "config" / "pace_config.yaml")
     )
-    result.add_argument("--trajectory", required=True)
+    result.add_argument("--trajectory")
     result.add_argument("--dataset", default="dataset_A")
     result.add_argument(
         "--output-root",
@@ -47,6 +47,12 @@ def parser():
     result.add_argument("--can-front", default="slcan0")
     result.add_argument("--can-back", default="slcan1")
     result.add_argument("--dry-run", action="store_true")
+    result.add_argument(
+        "--timing-validation",
+        action="store_true",
+        help="passive stop/poll transport qualification; never enables motors",
+    )
+    result.add_argument("--timing-duration", type=float, default=20.0)
     result.add_argument(
         "--initial-q",
         nargs=JOINT_COUNT,
@@ -65,8 +71,21 @@ def main(argv=None):
     args = parser().parse_args(argv)
     config = load_yaml(args.config)
     configured_hz = float(config.get("control_hz", 0.0))
-    if abs(configured_hz - 50.0) > 1.0e-9:
-        raise SystemExit(f"ERROR: PACE control_hz must be exactly 50, got {configured_hz}")
+    if configured_hz <= 0.0:
+        raise SystemExit(f"ERROR: PACE control_hz must be positive, got {configured_hz}")
+    if args.dry_run and args.timing_validation:
+        raise SystemExit("ERROR: choose either --dry-run or --timing-validation")
+    if args.timing_validation:
+        qualified = run_timing_validation(
+            config,
+            args.deploy_root,
+            args.can_front,
+            args.can_back,
+            args.timing_duration,
+        )
+        return 0 if qualified else 2
+    if not args.trajectory:
+        raise SystemExit("ERROR: --trajectory is required unless --timing-validation is used")
     if args.dry_run:
         trajectory_spec = load_yaml(args.trajectory)
         if args.initial_q is not None:

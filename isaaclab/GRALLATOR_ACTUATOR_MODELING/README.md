@@ -6,7 +6,7 @@ SocketCAN, routing, and feedback decoder as a runtime dependency.
 
 ## Fixed contract
 
-- Control and logging: 50 Hz (`dt=0.02 s`)
+- External control and logging: 200 Hz (`dt=0.005 s`)
 - Two CAN adapters: front legs on `slcan0`, back legs on `slcan1`
 - `v_des=0`, `tau_ff=0`
 - `q_des`: final logical position actually put into the MIT command after hard,
@@ -83,7 +83,7 @@ python3 -m pace_modeling \
   --trajectory trajectories/dataset_A_chirp_20s.yaml
 ```
 
-The 20-second example must produce exactly 1000 rows beneath:
+The 20-second example must produce exactly 4000 rows beneath:
 
 ```text
 actuator_modeling_logs/dataset_A/<timestamp>_dry/
@@ -91,21 +91,36 @@ actuator_modeling_logs/dataset_A/<timestamp>_dry/
 
 ## Jetson installation
 
-Place this folder inside the existing repository without replacing deployment
-code:
+Use the modeling package from the Issacsim checkout while keeping the working
+deployment repository as its hardware dependency:
 
 ```text
-~/JetsonNanoDeploy/actuator_modeling/
+~/Issacsim/isaaclab/GRALLATOR_ACTUATOR_MODELING/
 ```
 
 Then:
 
 ```bash
-cd ~/JetsonNanoDeploy/actuator_modeling
+cd ~/Issacsim/isaaclab/GRALLATOR_ACTUATOR_MODELING
 export PYTHONPATH="$PWD"
 sudo ip link set slcan0 txqueuelen 32
 sudo ip link set slcan1 txqueuelen 32
 ```
+
+Before enabling motors, qualify passive 12-motor stop/poll transport at the
+configured 200 Hz:
+
+```bash
+python3 -m pace_modeling \
+  --timing-validation \
+  --timing-duration 20 \
+  --deploy-root ~/JetsonNanoDeploy \
+  --can-front slcan0 \
+  --can-back slcan1
+```
+
+This mode never enables a motor and reports achieved rate, jitter, worst loop
+duration, deadline misses, incomplete feedback cycles, and pass/fail status.
 
 ## Real suspended test
 
@@ -143,7 +158,7 @@ Never fit PACE on Dataset B. It is reserved for validation.
 
 Every run creates a timestamped directory under `actuator_modeling_logs/` with:
 
-- `pace_*.csv`: all 50 Hz samples
+- `pace_*.csv`: every achieved 200 Hz control-cycle sample
 - `pace_*_metadata.json`: gains, limits, routing, signs, offsets, trajectory,
   source commit, and feedback-source definitions
 - `chirp_data.pt`: exact `time`, `des_dof_pos`, and `dof_pos` tensors in the
@@ -151,7 +166,9 @@ Every run creates a timestamped directory under `actuator_modeling_logs/` with:
 
 The main CSV includes command time, feedback time, per-joint feedback age,
 requested and sent targets, logical and raw feedback, effective gains, torque,
-temperature, fault bits, motor IDs, and buses.
+temperature, fault bits, motor IDs, buses, actual loop `dt`, loop frequency,
+work duration, deadline status, and instantaneous chirp frequency. Rows remain
+in memory during motion and are written only after safe motor shutdown.
 
 ## PACE export
 

@@ -1,5 +1,5 @@
 description: First all-joint direction, symmetry, limiter, and PACE-log validation
-control_hz: 50.0
+control_hz: 200.0
 
 # Internal hardware order is defined in pace_modeling/constants.py. Named values
 # here stay in logical joint coordinates; MotorCommandLayer applies polarity and

@@ -1,57 +1,43 @@
-"""Bounded asynchronous CSV and metadata writer."""
+"""In-memory experiment logger flushed only after motor shutdown."""
 
 from __future__ import annotations
 
 import csv
 import json
-import queue
-import threading
 from pathlib import Path
 
 
 class PaceDataLogger:
-    def __init__(self, csv_path, fieldnames, metadata, queue_size=4096):
+    def __init__(self, csv_path, fieldnames, metadata, max_rows=100_000):
         self.csv_path = Path(csv_path)
         self.metadata_path = self.csv_path.with_name(
             self.csv_path.stem + "_metadata.json"
         )
         self.fieldnames = list(fieldnames)
-        self.queue = queue.Queue(maxsize=int(queue_size))
-        self.error = None
+        self.metadata = dict(metadata)
+        self.max_rows = int(max_rows)
+        self.rows = []
         self.rows_written = 0
+        self.closed = False
         self.csv_path.parent.mkdir(parents=True, exist_ok=True)
-        self.metadata_path.write_text(
-            json.dumps(metadata, indent=2, sort_keys=True) + "\n",
-            encoding="utf-8",
-        )
-        self.thread = threading.Thread(target=self._writer, name="PaceCsvWriter")
-        self.thread.start()
-
-    def _writer(self):
-        try:
-            with self.csv_path.open("w", newline="", encoding="utf-8") as stream:
-                writer = csv.DictWriter(stream, fieldnames=self.fieldnames)
-                writer.writeheader()
-                while True:
-                    row = self.queue.get()
-                    if row is None:
-                        break
-                    writer.writerow(row)
-                    self.rows_written += 1
-        except Exception as exc:  # surfaced synchronously by write/close
-            self.error = exc
 
     def write(self, row):
-        if self.error is not None:
-            raise RuntimeError(f"PACE CSV writer failed: {self.error}")
-        try:
-            self.queue.put_nowait(dict(row))
-        except queue.Full as exc:
-            raise RuntimeError("PACE CSV queue is full; refusing to lose samples") from exc
+        if self.closed:
+            raise RuntimeError("PACE logger is already closed")
+        if len(self.rows) >= self.max_rows:
+            raise RuntimeError("PACE in-memory log is full; refusing to lose samples")
+        self.rows.append(row)
 
     def close(self):
-        self.queue.put(None)
-        self.thread.join()
-        if self.error is not None:
-            raise RuntimeError(f"PACE CSV writer failed: {self.error}")
-
+        if self.closed:
+            return
+        self.closed = True
+        self.metadata_path.write_text(
+            json.dumps(self.metadata, indent=2, sort_keys=True) + "\n",
+            encoding="utf-8",
+        )
+        with self.csv_path.open("w", newline="", encoding="utf-8") as stream:
+            writer = csv.DictWriter(stream, fieldnames=self.fieldnames)
+            writer.writeheader()
+            writer.writerows(self.rows)
+        self.rows_written = len(self.rows)

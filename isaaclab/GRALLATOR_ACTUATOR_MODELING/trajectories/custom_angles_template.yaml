@@ -1,4 +1,4 @@
-control_hz: 50.0
+control_hz: 200.0
 description: "Replace these named logical Isaac-coordinate angles with test values"
 segments:
   - name: pose_1
@@ -34,4 +34,3 @@ segments:
     type: hold
     duration_s: 2.0
     target: {}
-

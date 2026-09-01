@@ -1,7 +1,7 @@
-control_hz: 50.0
+control_hz: 200.0
 can_bitrate: 1000000
 can_timeout_s: 0.01
-feedback_timeout_s: 0.012
+feedback_timeout_s: 0.003
 max_feedback_age_s: 0.020
 
 # Conservative suspended-test defaults. These values are metadata and are also
@@ -28,7 +28,10 @@ max_estimated_torque_nm: 20.0
 max_measured_torque_nm: 25.0
 max_velocity_rad_s: 6.0
 max_temperature_c: 65.0
-max_loop_lateness_s: 0.010
+max_tracking_error_rad: 0.40
+max_tracking_error_consecutive_cycles: 5
+deadline_miss_tolerance_s: 0.0005
+max_loop_lateness_s: 0.005
 max_consecutive_overruns: 3
 
 # Limiter visibility for identification experiments. A warning marks noticeable
@@ -37,7 +40,7 @@ max_consecutive_overruns: 3
 limiter_warning_delta_rad: 0.005
 limiter_abort_delta_rad: 0.030
 limiter_abort_consecutive_cycles: 5
-terminal_status_hz: 2.0
+terminal_status_hz: 5.0
 
 motor_ids:
   FL_hip_joint: 4
