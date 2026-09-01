@@ -141,10 +141,35 @@ def safe_limit_arrays(config, trajectory_spec):
 
 
 def validate_requested_trajectory(config, trajectory_spec, samples):
-    """Reject any mathematical request outside its configured safe envelope."""
+    """Reject requests outside the safe envelope, except an inward entry move."""
     if not samples:
         raise ValueError("trajectory contains no samples")
     q_min, q_max = safe_limit_arrays(config, trajectory_spec)
+    hard_min, hard_max = hard_limit_arrays(config)
+    tolerance = float(config.get("initial_pose_hard_limit_tolerance_rad", 0.02))
+    if tolerance < 0.0:
+        raise ValueError("initial_pose_hard_limit_tolerance_rad cannot be negative")
+    initial = np.asarray(samples[0].q_requested, dtype=np.float64)
+    if np.any(initial < hard_min - tolerance) or np.any(initial > hard_max + tolerance):
+        index = int(np.flatnonzero(
+            (initial < hard_min - tolerance) | (initial > hard_max + tolerance)
+        )[0])
+        raise ValueError(
+            f"measured initial {JOINT_ORDER[index]}={initial[index]:+.6f} rad "
+            f"is outside hard limit plus tolerance "
+            f"[{hard_min[index] - tolerance:+.6f}, "
+            f"{hard_max[index] + tolerance:+.6f}] rad"
+        )
+
+    segments = trajectory_spec.get("segments", [])
+    first_segment_name = str(segments[0].get("name", "segment_0")) if segments else ""
+    first_is_entry = bool(
+        segments and str(segments[0].get("type", "")).lower() == "minimum_jerk"
+    )
+    initial_violation = np.maximum(q_min - initial, 0.0) + np.maximum(
+        initial - q_max, 0.0
+    )
+    previous_violation = initial_violation.copy()
     for sample in samples:
         values = np.asarray(sample.q_requested, dtype=np.float64)
         if values.shape != (JOINT_COUNT,) or not np.all(np.isfinite(values)):
@@ -152,8 +177,23 @@ def validate_requested_trajectory(config, trajectory_spec, samples):
                 f"sample {sample.index} ({sample.segment}) has invalid q_requested"
             )
         invalid = np.flatnonzero((values < q_min) | (values > q_max))
-        if invalid.size:
-            index = int(invalid[0])
+        rejected = []
+        for raw_index in invalid:
+            index = int(raw_index)
+            violation = max(q_min[index] - values[index], 0.0) + max(
+                values[index] - q_max[index], 0.0
+            )
+            entering = bool(
+                first_is_entry
+                and sample.segment == first_segment_name
+                and initial_violation[index] > 0.0
+                and violation <= previous_violation[index] + 1.0e-10
+            )
+            if not entering:
+                rejected.append(index)
+            previous_violation[index] = violation
+        if rejected:
+            index = rejected[0]
             raise ValueError(
                 "offline trajectory validation failed: "
                 f"sample={sample.index} segment={sample.segment} "

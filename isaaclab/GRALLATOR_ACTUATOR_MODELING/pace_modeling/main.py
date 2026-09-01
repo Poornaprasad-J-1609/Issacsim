@@ -8,7 +8,7 @@ from pathlib import Path
 
 import numpy as np
 
-from .constants import JOINT_COUNT
+from .constants import JOINT_COUNT, JOINT_ORDER
 from .controller import load_yaml, run_dry, run_hardware, run_timing_validation
 from .trajectory import joint_vector
 
@@ -54,6 +54,16 @@ def parser():
     )
     result.add_argument("--timing-duration", type=float, default=20.0)
     result.add_argument(
+        "--command-rate-limit",
+        type=float,
+        default=None,
+        metavar="RAD_S",
+        help=(
+            "explicit per-joint command-rate ceiling for this run; must be "
+            "positive and no greater than max_velocity_rad_s"
+        ),
+    )
+    result.add_argument(
         "--initial-q",
         nargs=JOINT_COUNT,
         type=float,
@@ -70,6 +80,17 @@ def parser():
 def main(argv=None):
     args = parser().parse_args(argv)
     config = load_yaml(args.config)
+    if args.command_rate_limit is not None:
+        rate = float(args.command_rate_limit)
+        maximum = float(config["max_velocity_rad_s"])
+        if not 0.0 < rate <= maximum:
+            raise SystemExit(
+                f"ERROR: --command-rate-limit must be in (0,{maximum}], got {rate}"
+            )
+        config["max_command_rate_rad_s"] = {
+            name: rate for name in JOINT_ORDER
+        }
+        config["command_rate_override_rad_s"] = rate
     configured_hz = float(config.get("control_hz", 0.0))
     if configured_hz <= 0.0:
         raise SystemExit(f"ERROR: PACE control_hz must be positive, got {configured_hz}")

@@ -152,9 +152,17 @@ python3 -m pace_modeling \
   --deploy-root ~/JetsonNanoDeploy \
   --dataset slow_chirp_stage1 \
   --trajectory trajectories/grallator_all_joints_slow_chirp.yaml \
+  --command-rate-limit 0.9 \
   --can-front slcan0 \
   --can-back slcan1
 ```
+
+The Stage 1 override is explicit because a `0.25 rad`, `0.5 Hz` sinusoid
+requires `0.785 rad/s`. It does not alter physical joint, torque, feedback,
+temperature, or tracking-error limits. The first minimum-jerk entry may begin
+slightly outside the preferred trajectory envelope only when the measured pose
+is within `0.02 rad` of the physical hard limit and every subsequent entry
+sample moves inward.
 
 The program first polls all 12 encoders while disabled, prints the measured
 starting pose, and requires the exact phrase `ENABLE PACE` before enabling.

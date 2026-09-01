@@ -63,7 +63,7 @@ class TrajectoryTests(unittest.TestCase):
             float(spec["dry_run_initial_q"][name]) for name in JOINT_ORDER
         ])
         samples = build_trajectory(spec, initial, expected_hz=200.0)
-        self.assertEqual(len(samples), 6200)
+        self.assertEqual(len(samples), 7400)
         chirp = [sample for sample in samples
                  if sample.segment == "all_joints_slow_chirp"]
         self.assertEqual(len(chirp), 4000)
@@ -102,6 +102,24 @@ class TrajectoryTests(unittest.TestCase):
             )
             previous = sent
         self.assertLess(maximum_delta, 1.0e-9)
+
+    def test_entry_move_accepts_only_small_inward_initial_limit_violation(self):
+        config = load_yaml(ROOT / "config" / "pace_config.yaml")
+        spec = load_yaml(
+            ROOT / "trajectories" / "grallator_all_joints_stage0_chirp.yaml"
+        )
+        initial = np.array([
+            float(spec["dry_run_initial_q"][name]) for name in JOINT_ORDER
+        ])
+        fl_hip = JOINT_ORDER.index("FL_hip_joint")
+        initial[fl_hip] = -0.506996
+        samples = build_trajectory(spec, initial, expected_hz=200.0)
+        validate_requested_trajectory(config, spec, samples)
+
+        initial[fl_hip] = -0.521
+        samples = build_trajectory(spec, initial, expected_hz=200.0)
+        with self.assertRaisesRegex(ValueError, "hard limit plus tolerance"):
+            validate_requested_trajectory(config, spec, samples)
 
     def test_minimum_jerk_reaches_target(self):
         target = {name: 0.1 for name in JOINT_ORDER}
@@ -156,7 +174,7 @@ class TrajectoryTests(unittest.TestCase):
             float(spec["dry_run_initial_q"][name]) for name in JOINT_ORDER
         ])
         plan = compile_trajectory(spec, initial, expected_hz=200.0)
-        elapsed = 6.0 + 7.123
+        elapsed = 12.0 + 7.123
         sample = plan.evaluate(elapsed)
         local_time = 7.123
         f_start, f_end, duration = 0.1, 0.5, 20.0

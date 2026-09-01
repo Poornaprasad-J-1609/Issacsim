@@ -37,7 +37,7 @@ safe_joint_limits:
 segments:
   - name: measured_to_crouch
     type: minimum_jerk
-    duration_s: 4.0
+    duration_s: 10.0
     target: *crouch_center
 
   - name: crouch_hold_before_chirp
