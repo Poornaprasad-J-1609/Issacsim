@@ -73,6 +73,36 @@ class TrajectoryTests(unittest.TestCase):
         requested = np.stack([sample.q_requested for sample in chirp])
         self.assertTrue(np.all(np.ptp(requested, axis=0) > 0.49))
 
+    def test_stage0_chirp_fits_configured_command_rates(self):
+        config = load_yaml(ROOT / "config" / "pace_config.yaml")
+        spec = load_yaml(
+            ROOT / "trajectories" / "grallator_all_joints_stage0_chirp.yaml"
+        )
+        initial = np.array([
+            float(spec["dry_run_initial_q"][name]) for name in JOINT_ORDER
+        ])
+        samples = build_trajectory(spec, initial, expected_hz=200.0)
+        self.assertEqual(len(samples), 7400)
+        validate_requested_trajectory(config, spec, samples)
+
+        previous = initial.copy()
+        maximum_delta = 0.0
+        for sample in samples:
+            sent = final_command_target(
+                sample.q_requested,
+                previous,
+                previous,
+                np.zeros(12),
+                config,
+                0.005,
+            )
+            maximum_delta = max(
+                maximum_delta,
+                float(np.max(np.abs(sent - sample.q_requested))),
+            )
+            previous = sent
+        self.assertLess(maximum_delta, 1.0e-9)
+
     def test_minimum_jerk_reaches_target(self):
         target = {name: 0.1 for name in JOINT_ORDER}
         spec = {

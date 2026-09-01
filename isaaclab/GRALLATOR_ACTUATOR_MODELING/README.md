@@ -133,7 +133,19 @@ as a new measurement. Sustained loss safely aborts the experiment.
 ## Real suspended test
 
 Review every requested angle, physically suspend the robot, clear the work
-area, and keep emergency power removal accessible. Start Dataset A with:
+area, and keep emergency power removal accessible. Begin with the conservative
+`0.10 rad` Stage 0 validation:
+
+```bash
+python3 -m pace_modeling \
+  --deploy-root ~/JetsonNanoDeploy \
+  --dataset stage0_suspended_chirp \
+  --trajectory trajectories/grallator_all_joints_stage0_chirp.yaml \
+  --can-front slcan0 \
+  --can-back slcan1
+```
+
+Only after reviewing Stage 0, run the original `0.25 rad` Dataset A with:
 
 ```bash
 python3 -m pace_modeling \
