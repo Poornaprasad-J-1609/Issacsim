@@ -1,9 +1,0 @@
-# Inherits routing, encoder conversion, physical limits, feedback timing, and
-# safety thresholds from pace_config.yaml. Keep these exact gains in the Isaac
-# PACE replay/fitting controller for this dataset.
-extends: pace_config.yaml
-
-control_hz: 50.0
-kp: 250.0
-kd: 4.0
-

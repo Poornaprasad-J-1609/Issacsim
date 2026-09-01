@@ -10,21 +10,10 @@ import numpy as np
 
 from .constants import JOINT_COUNT
 from .controller import load_yaml, run_dry, run_hardware
+from .trajectory import joint_vector
 
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
-
-
-def load_config(path):
-    path = Path(path).resolve()
-    config = load_yaml(path)
-    inherited = config.pop("extends", None)
-    if inherited is None:
-        return config
-    base_path = (path.parent / str(inherited)).resolve()
-    base = load_config(base_path)
-    base.update(config)
-    return base
 
 
 def default_deploy_root():
@@ -62,23 +51,34 @@ def parser():
         "--initial-q",
         nargs=JOINT_COUNT,
         type=float,
-        default=[0.0] * JOINT_COUNT,
+        default=None,
         metavar="Q",
-        help="12 logical initial angles used only by --dry-run",
+        help=(
+            "12 logical initial angles used only by --dry-run; defaults to "
+            "trajectory dry_run_initial_q, then zeros"
+        ),
     )
     return result
 
 
 def main(argv=None):
     args = parser().parse_args(argv)
-    config = load_config(args.config)
+    config = load_yaml(args.config)
     configured_hz = float(config.get("control_hz", 0.0))
     if abs(configured_hz - 50.0) > 1.0e-9:
         raise SystemExit(f"ERROR: PACE control_hz must be exactly 50, got {configured_hz}")
     if args.dry_run:
+        trajectory_spec = load_yaml(args.trajectory)
+        if args.initial_q is not None:
+            initial_q = np.asarray(args.initial_q, dtype=np.float64)
+        else:
+            initial_q = joint_vector(
+                trajectory_spec.get("dry_run_initial_q"),
+                field="dry_run_initial_q",
+            )
         csv_path, count = run_dry(
             config, args.config, args.trajectory, args.output_root, args.dataset,
-            np.asarray(args.initial_q, dtype=np.float64),
+            initial_q,
         )
     else:
         csv_path, count = run_hardware(

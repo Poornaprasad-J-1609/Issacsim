@@ -31,6 +31,14 @@ max_temperature_c: 65.0
 max_loop_lateness_s: 0.010
 max_consecutive_overruns: 3
 
+# Limiter visibility for identification experiments. A warning marks noticeable
+# reshaping; sustained larger reshaping stops the real run instead of producing
+# a misleading PACE dataset.
+limiter_warning_delta_rad: 0.005
+limiter_abort_delta_rad: 0.030
+limiter_abort_consecutive_cycles: 5
+terminal_status_hz: 2.0
+
 motor_ids:
   FL_hip_joint: 4
   FR_hip_joint: 1

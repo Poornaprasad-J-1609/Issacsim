@@ -23,6 +23,16 @@ FL_thigh, FR_thigh, BL_thigh, BR_thigh,
 FL_calf, FR_calf, BL_calf, BR_calf
 ```
 
+Detailed CSV columns stay in that established internal hardware order. PACE
+tensor arrays are explicitly reordered to:
+
+```text
+FR_hip, FR_thigh, FR_calf,
+FL_hip, FL_thigh, FL_calf,
+BR_hip, BR_thigh, BR_calf,
+BL_hip, BL_thigh, BL_calf
+```
+
 ## Trajectory format
 
 Edit `trajectories/custom_angles_template.yaml`. Targets use logical
@@ -37,27 +47,28 @@ Isaac/URDF radians and may be supplied by joint name. Supported segment types:
 
 Unspecified joints retain the preceding segment's target. The runtime always
 logs both the requested trajectory and the final transmitted target.
-Use `relative_target` instead of `target` to specify an offset from the target
-at the beginning of that segment.
 
-## Kp/Kd testing phase
+## First slow all-joint chirp
 
-Before collecting the full PACE datasets, run the one-joint suspended test:
+The Stage-1 trajectory is
+`trajectories/grallator_all_joints_slow_chirp.yaml`. It performs a four-second
+minimum-jerk transition from measured feedback to the configured crouch,
+holds for two seconds, excites all 12 joints with a linear 0.1 to 0.5 Hz chirp
+for 20 seconds, returns with minimum jerk, and holds before shutdown.
+
+Run its offline validation first:
 
 ```bash
 python3 -m pace_modeling \
-  --config config/testing_phase_kp250_kd4.yaml \
-  --deploy-root ~/JetsonNanoDeploy \
-  --dataset testing_phase \
-  --trajectory trajectories/testing_phase_small_movement.yaml \
-  --can-front slcan0 \
-  --can-back slcan1
+  --dry-run \
+  --dataset slow_chirp_stage1 \
+  --trajectory trajectories/grallator_all_joints_slow_chirp.yaml
 ```
 
-This uses `Kp=250`, `Kd=4` on all twelve enabled actuators but moves only the
-FL hip by `+0.05 rad` relative to its measured start and then returns it. The
-robot must be fully suspended. Use the same gains when replaying this dataset
-in Isaac; otherwise PACE can mistake controller mismatch for plant dynamics.
+The report includes requested ranges, theoretical and sampled velocity,
+nonzero-amplitude confirmation, and every hard/rate/torque limiter count. If it
+reports that the real distortion abort would trigger, do not run hardware
+until the rate/torque preparation has been reviewed explicitly.
 
 ## Dry run
 
@@ -104,8 +115,8 @@ area, and keep emergency power removal accessible. Start Dataset A with:
 ```bash
 python3 -m pace_modeling \
   --deploy-root ~/JetsonNanoDeploy \
-  --dataset dataset_A \
-  --trajectory trajectories/dataset_A_chirp_20s.yaml \
+  --dataset slow_chirp_stage1 \
+  --trajectory trajectories/grallator_all_joints_slow_chirp.yaml \
   --can-front slcan0 \
   --can-back slcan1
 ```
@@ -135,6 +146,8 @@ Every run creates a timestamped directory under `actuator_modeling_logs/` with:
 - `pace_*.csv`: all 50 Hz samples
 - `pace_*_metadata.json`: gains, limits, routing, signs, offsets, trajectory,
   source commit, and feedback-source definitions
+- `chirp_data.pt`: exact `time`, `des_dof_pos`, and `dof_pos` tensors in the
+  explicit PACE export order
 
 The main CSV includes command time, feedback time, per-joint feedback age,
 requested and sent targets, logical and raw feedback, effective gains, torque,
@@ -150,16 +163,18 @@ python3 export_pace.py \
   --output chirp_data.pt
 ```
 
-The output contains:
+The output contains exactly:
 
 ```python
 {
     "time":        [N],
-    "dof_pos":     [N, 12],
     "des_dof_pos": [N, 12],
-    "joint_order": [...],
+    "dof_pos":     [N, 12],
 }
 ```
+
+Both the internal and PACE export joint orders are recorded in the separate
+JSON metadata file, keeping the tensor contract limited to PACE's three keys.
 
 ## Feedback-source precision
 

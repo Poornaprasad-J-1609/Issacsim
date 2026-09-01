@@ -18,6 +18,8 @@ class TrajectorySample:
     time_s: float
     segment: str
     q_requested: np.ndarray
+    segment_time_s: float = 0.0
+    instantaneous_frequency_hz: float | None = None
 
 
 def load_yaml(path):
@@ -96,23 +98,11 @@ def build_trajectory(spec, initial_q, expected_hz=50.0):
 
         start = current.copy()
         if kind in ("hold", "linear", "smoothstep", "minimum_jerk"):
-            has_target = "target" in segment
-            has_relative_target = "relative_target" in segment
-            if has_target and has_relative_target:
-                raise ValueError(
-                    f"{name}: use either target or relative_target, not both"
-                )
-            if has_relative_target:
-                delta = joint_vector(
-                    segment.get("relative_target"),
-                    field=f"{name}.relative_target",
-                )
-                target = start + delta
-            else:
-                target = joint_vector(
-                    segment.get("target"), base=start, field=f"{name}.target"
-                )
+            target = joint_vector(
+                segment.get("target"), base=start, field=f"{name}.target"
+            )
             for local_index in range(count):
+                local_time = local_index * dt
                 if kind == "hold":
                     q = target
                 else:
@@ -120,17 +110,14 @@ def build_trajectory(spec, initial_q, expected_hz=50.0):
                     if kind == "smoothstep":
                         alpha = alpha * alpha * (3.0 - 2.0 * alpha)
                     elif kind == "minimum_jerk":
-                        alpha = (
-                            10.0 * alpha**3
-                            - 15.0 * alpha**4
-                            + 6.0 * alpha**5
-                        )
+                        alpha = 10.0 * alpha**3 - 15.0 * alpha**4 + 6.0 * alpha**5
                     q = start + alpha * (target - start)
                 samples.append(TrajectorySample(
                     index=global_index,
                     time_s=global_index * dt,
                     segment=name,
                     q_requested=np.asarray(q, dtype=np.float64).copy(),
+                    segment_time_s=local_time,
                 ))
                 global_index += 1
             current = target.copy()
@@ -147,14 +134,25 @@ def build_trajectory(spec, initial_q, expected_hz=50.0):
                 local_time = local_index * dt
                 if kind == "sine":
                     phase = 2.0 * math.pi * f_start * local_time
+                    instantaneous_frequency = f_start
                 else:
                     phase = _chirp_phase(local_time, duration, f_start, f_end, law)
+                    if law == "linear":
+                        instantaneous_frequency = (
+                            f_start + (f_end - f_start) * local_time / duration
+                        )
+                    else:
+                        instantaneous_frequency = f_start * (
+                            f_end / f_start
+                        ) ** (local_time / duration)
                 q = center + amplitude * math.sin(phase + phase_offset)
                 samples.append(TrajectorySample(
                     index=global_index,
                     time_s=global_index * dt,
                     segment=name,
                     q_requested=np.asarray(q, dtype=np.float64).copy(),
+                    segment_time_s=local_time,
+                    instantaneous_frequency_hz=instantaneous_frequency,
                 ))
                 global_index += 1
             current = samples[-1].q_requested.copy()

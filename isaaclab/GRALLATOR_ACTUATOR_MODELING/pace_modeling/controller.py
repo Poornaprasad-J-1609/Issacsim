@@ -15,7 +15,12 @@ from pathlib import Path
 import numpy as np
 import yaml
 
-from .constants import JOINT_COUNT, JOINT_ORDER
+from .constants import (
+    JOINT_COUNT,
+    JOINT_ORDER,
+    PACE_EXPORT_ORDER,
+    to_pace_order,
+)
 from .data_logger import PaceDataLogger
 from .trajectory import joint_vector, load_trajectory
 
@@ -47,7 +52,10 @@ def hard_limit_arrays(config):
     return q_min, q_max
 
 
-def final_command_target(requested, previous, q_actual, qd_actual, config, dt):
+def final_command_target(
+    requested, previous, q_actual, qd_actual, config, dt,
+    return_diagnostics=False,
+):
     """Return the logical target that is allowed to reach packet construction."""
     requested = np.asarray(requested, dtype=np.float64)
     previous = np.asarray(previous, dtype=np.float64)
@@ -59,13 +67,25 @@ def final_command_target(requested, previous, q_actual, qd_actual, config, dt):
     kd = per_joint_values(config["kd"], "kd")
     torque_limit = per_joint_values(config["max_estimated_torque_nm"], "max_estimated_torque_nm")
 
+    arrays = (requested, previous, q_actual, qd_actual)
+    if any(array.shape != (JOINT_COUNT,) for array in arrays):
+        raise ValueError(f"command arrays must all have shape ({JOINT_COUNT},)")
+    if not all(np.all(np.isfinite(array)) for array in arrays):
+        raise ValueError("command arrays contain NaN or Inf")
+
     q_des = np.clip(requested, q_min, q_max)
+    hard_limit_active = np.abs(q_des - requested) > 1.0e-12
+    before_rate = q_des.copy()
     q_des = np.clip(q_des, previous - max_rate * dt, previous + max_rate * dt)
+    rate_limit_active = np.abs(q_des - before_rate) > 1.0e-12
+    before_second_hard_limit = q_des.copy()
     q_des = np.clip(q_des, q_min, q_max)
+    hard_limit_active |= np.abs(q_des - before_second_hard_limit) > 1.0e-12
 
     # Preserve damping first, then restrict the position target to the remaining
     # torque budget. The resulting q_des is what gets logged and transmitted.
     damping = -kd * qd_actual
+    before_torque_budget = q_des.copy()
     for index in range(JOINT_COUNT):
         if torque_limit[index] <= 0.0 or kp[index] <= 0.0:
             continue
@@ -78,8 +98,139 @@ def final_command_target(requested, previous, q_actual, qd_actual, config, dt):
             q_actual[index] + error_low,
             q_actual[index] + error_high,
         )
+    torque_budget_limit_active = np.abs(q_des - before_torque_budget) > 1.0e-12
+    before_final_hard_limit = q_des.copy()
     q_des = np.clip(q_des, q_min, q_max)
+    hard_limit_active |= np.abs(q_des - before_final_hard_limit) > 1.0e-12
+    diagnostics = {
+        "hard_limit_active": hard_limit_active,
+        "rate_limit_active": rate_limit_active,
+        "torque_budget_limit_active": torque_budget_limit_active,
+        "limiter_delta": q_des - requested,
+        "limiter_abs_delta": np.abs(q_des - requested),
+    }
+    if return_diagnostics:
+        return q_des, diagnostics
     return q_des
+
+
+def safe_limit_arrays(config, trajectory_spec):
+    """Return the intersection of deployment and trajectory-specific limits."""
+    q_min, q_max = hard_limit_arrays(config)
+    safe_limits = trajectory_spec.get("safe_joint_limits", {})
+    if safe_limits is None:
+        safe_limits = {}
+    if not isinstance(safe_limits, dict):
+        raise ValueError("safe_joint_limits must be a joint-name mapping")
+    unknown = sorted(set(safe_limits) - set(JOINT_ORDER))
+    if unknown:
+        raise ValueError(f"safe_joint_limits contains unknown joints: {unknown}")
+    for index, name in enumerate(JOINT_ORDER):
+        if name not in safe_limits:
+            continue
+        bounds = safe_limits[name]
+        if not isinstance(bounds, dict) or "min" not in bounds or "max" not in bounds:
+            raise ValueError(f"safe_joint_limits.{name} needs min and max")
+        q_min[index] = max(q_min[index], float(bounds["min"]))
+        q_max[index] = min(q_max[index], float(bounds["max"]))
+        if q_min[index] >= q_max[index]:
+            raise ValueError(f"safe range for {name} is empty after intersection")
+    return q_min, q_max
+
+
+def validate_requested_trajectory(config, trajectory_spec, samples):
+    """Reject any mathematical request outside its configured safe envelope."""
+    if not samples:
+        raise ValueError("trajectory contains no samples")
+    q_min, q_max = safe_limit_arrays(config, trajectory_spec)
+    for sample in samples:
+        values = np.asarray(sample.q_requested, dtype=np.float64)
+        if values.shape != (JOINT_COUNT,) or not np.all(np.isfinite(values)):
+            raise ValueError(
+                f"sample {sample.index} ({sample.segment}) has invalid q_requested"
+            )
+        invalid = np.flatnonzero((values < q_min) | (values > q_max))
+        if invalid.size:
+            index = int(invalid[0])
+            raise ValueError(
+                "offline trajectory validation failed: "
+                f"sample={sample.index} segment={sample.segment} "
+                f"joint={JOINT_ORDER[index]} requested={values[index]:+.6f} rad "
+                f"allowed=[{q_min[index]:+.6f}, {q_max[index]:+.6f}] rad"
+            )
+    return q_min, q_max
+
+
+def trajectory_report(trajectory_spec, samples, control_hz=50.0):
+    requested = np.stack([sample.q_requested for sample in samples])
+    dt = 1.0 / float(control_hz)
+    numerical_velocity = np.zeros_like(requested)
+    if len(samples) > 1:
+        numerical_velocity[1:] = np.diff(requested, axis=0) / dt
+    chirps = [segment for segment in trajectory_spec.get("segments", [])
+              if str(segment.get("type", "")).lower() == "chirp"]
+    print("\nOFFLINE TRAJECTORY VALIDATION PASSED")
+    print(f"Samples: {len(samples)} at {control_hz:.1f} Hz")
+    print(f"Duration: {len(samples) * dt:.3f} s")
+    for segment in chirps:
+        center = joint_vector(segment.get("center"), field="chirp.center")
+        amplitude = joint_vector(segment.get("amplitude"), field="chirp.amplitude")
+        f_start = float(segment["f_start_hz"])
+        f_end = float(segment.get("f_end_hz", f_start))
+        print(
+            f"Chirp: {f_start:.3f} -> {f_end:.3f} Hz, "
+            f"duration={float(segment['duration_s']):.3f} s, "
+            f"law={segment.get('law', 'linear')}"
+        )
+        print("Center:", np.array2string(center, precision=3))
+        print("Signed amplitude:", np.array2string(amplitude, precision=3))
+        if np.any(np.abs(amplitude) <= 0.0):
+            missing = [JOINT_ORDER[i] for i in np.flatnonzero(amplitude == 0.0)]
+            raise ValueError(f"chirp amplitudes must be nonzero for all joints: {missing}")
+        theoretical = 2.0 * math.pi * max(f_start, f_end) * np.abs(amplitude)
+        print("All 12 chirp amplitudes are nonzero.")
+    print("Per-joint requested range and maximum velocity:")
+    theoretical = np.zeros(JOINT_COUNT, dtype=np.float64)
+    for segment in chirps:
+        amplitude = joint_vector(segment.get("amplitude"), field="chirp.amplitude")
+        f_max = max(float(segment["f_start_hz"]), float(segment.get("f_end_hz", 0.0)))
+        theoretical = np.maximum(theoretical, 2.0 * math.pi * f_max * np.abs(amplitude))
+    for i, name in enumerate(JOINT_ORDER):
+        print(
+            f"  {name:20s} [{requested[:, i].min():+.4f}, "
+            f"{requested[:, i].max():+.4f}] rad  "
+            f"theoretical={theoretical[i]:.4f} rad/s  "
+            f"sampled={np.max(np.abs(numerical_velocity[:, i])):.4f} rad/s"
+        )
+
+
+def save_pace_dataset(path, times, q_des, q_actual):
+    """Write the exact three-key PACE tensor contract in explicit PACE order."""
+    if not times:
+        return None
+    time_array = np.asarray(times, dtype=np.float32)
+    desired = to_pace_order(np.asarray(q_des, dtype=np.float32))
+    actual = to_pace_order(np.asarray(q_actual, dtype=np.float32))
+    if desired.shape != (len(time_array), JOINT_COUNT) or actual.shape != desired.shape:
+        raise ValueError("PACE arrays must have shapes time=[N], positions=[N,12]")
+    if not np.all(np.isfinite(time_array)) or not np.all(np.diff(time_array) > 0.0):
+        raise ValueError("PACE timestamps must be finite and strictly increasing")
+    if not np.all(np.isfinite(desired)) or not np.all(np.isfinite(actual)):
+        raise ValueError("PACE position arrays contain NaN or Inf")
+    try:
+        import torch
+    except ImportError as exc:
+        raise RuntimeError("PyTorch is required to save chirp_data.pt") from exc
+    output = Path(path)
+    torch.save(
+        {
+            "time": torch.from_numpy(time_array),
+            "des_dof_pos": torch.from_numpy(desired),
+            "dof_pos": torch.from_numpy(actual),
+        },
+        output,
+    )
+    return output
 
 
 def csv_fieldnames():
@@ -91,6 +242,8 @@ def csv_fieldnames():
     ]
     suffixes = [
         "q_requested", "q_des", "q_actual", "qd_actual", "q_raw", "qd_raw",
+        "limiter_delta", "limiter_abs_delta", "hard_limit_active",
+        "rate_limit_active", "torque_budget_limit_active",
         "kp", "kd", "v_des", "tau_ff", "motor_id", "bus",
         "feedback_time_s", "feedback_age_s", "torque_nm", "temperature_c",
         "fault_bits",
@@ -128,6 +281,8 @@ def metadata(config, trajectory_spec, config_path, trajectory_path, deploy_root,
         "control_rate_hz": 50.0,
         "control_dt_s": 0.02,
         "joint_order": JOINT_ORDER,
+        "internal_joint_order": JOINT_ORDER,
+        "pace_export_order": PACE_EXPORT_ORDER,
         "q_des_definition": "logical q_des from the final MIT command after hard/rate/estimated-torque limiting",
         "q_actual_definition": "real MIT encoder feedback converted using direction and zero offset",
         "q_raw_definition": "mechanical position from MIT operation-status feedback (communication type 2)",
@@ -162,6 +317,8 @@ def _base_row(index, nominal_time, command_time, feedback_time, dt, lateness, se
 def run_dry(config, config_path, trajectory_path, output_root, dataset_name, initial_q):
     dt = 0.02
     trajectory_spec, samples = load_trajectory(trajectory_path, initial_q, expected_hz=50.0)
+    validate_requested_trajectory(config, trajectory_spec, samples)
+    trajectory_report(trajectory_spec, samples, control_hz=50.0)
     csv_path = make_output_paths(output_root, dataset_name, dry_run=True)
     logger = PaceDataLogger(
         csv_path,
@@ -177,11 +334,42 @@ def run_dry(config, config_path, trajectory_path, output_root, dataset_name, ini
     q_actual = np.asarray(initial_q, dtype=np.float64).copy()
     qd_actual = np.zeros(JOINT_COUNT, dtype=np.float64)
     q_des_previous = q_actual.copy()
+    pace_times = []
+    pace_q_des = []
+    pace_q_actual = []
+    limiter_counts = {
+        "hard_limit_active": np.zeros(JOINT_COUNT, dtype=np.int64),
+        "rate_limit_active": np.zeros(JOINT_COUNT, dtype=np.int64),
+        "torque_budget_limit_active": np.zeros(JOINT_COUNT, dtype=np.int64),
+    }
+    max_limiter_delta = np.zeros(JOINT_COUNT, dtype=np.float64)
+    excessive_cycles = 0
+    maximum_excessive_cycles = 0
+    warned = False
     try:
         for sample in samples:
-            q_des = final_command_target(
-                sample.q_requested, q_des_previous, q_actual, qd_actual, config, dt
+            q_des, diagnostics = final_command_target(
+                sample.q_requested, q_des_previous, q_actual, qd_actual,
+                config, dt, return_diagnostics=True,
             )
+            max_delta_this_cycle = float(np.max(diagnostics["limiter_abs_delta"]))
+            max_limiter_delta = np.maximum(
+                max_limiter_delta, diagnostics["limiter_abs_delta"]
+            )
+            for key in limiter_counts:
+                limiter_counts[key] += diagnostics[key].astype(np.int64)
+            if max_delta_this_cycle > float(config.get("limiter_warning_delta_rad", 0.005)):
+                if not warned:
+                    print(
+                        "WARNING: dry run shows q_des-q_requested exceeding "
+                        f"{float(config.get('limiter_warning_delta_rad', 0.005)):.3f} rad"
+                    )
+                    warned = True
+            if max_delta_this_cycle > float(config.get("limiter_abort_delta_rad", 0.03)):
+                excessive_cycles += 1
+                maximum_excessive_cycles = max(maximum_excessive_cycles, excessive_cycles)
+            else:
+                excessive_cycles = 0
             old_q = q_actual.copy()
             q_actual += 0.18 * (q_des - q_actual)
             qd_actual = (q_actual - old_q) / dt
@@ -196,6 +384,13 @@ def run_dry(config, config_path, trajectory_path, output_root, dataset_name, ini
                     "q_requested": sample.q_requested[i], "q_des": q_des[i],
                     "q_actual": q_actual[i], "qd_actual": qd_actual[i],
                     "q_raw": q_raw[i], "qd_raw": qd_raw[i], "kp": kp[i],
+                    "limiter_delta": diagnostics["limiter_delta"][i],
+                    "limiter_abs_delta": diagnostics["limiter_abs_delta"][i],
+                    "hard_limit_active": bool(diagnostics["hard_limit_active"][i]),
+                    "rate_limit_active": bool(diagnostics["rate_limit_active"][i]),
+                    "torque_budget_limit_active": bool(
+                        diagnostics["torque_budget_limit_active"][i]
+                    ),
                     "kd": kd[i], "v_des": 0.0, "tau_ff": 0.0,
                     "motor_id": motor_ids[i], "bus": buses[i],
                     "feedback_time_s": sample.time_s + 0.001,
@@ -204,9 +399,33 @@ def run_dry(config, config_path, trajectory_path, output_root, dataset_name, ini
                 }
                 row.update({f"{name}_{key}": value for key, value in values.items()})
             logger.write(row)
+            pace_times.append(sample.time_s)
+            pace_q_des.append(q_des.copy())
+            pace_q_actual.append(q_actual.copy())
             q_des_previous = q_des
     finally:
         logger.close()
+    pace_path = save_pace_dataset(
+        csv_path.parent / "chirp_data.pt", pace_times, pace_q_des, pace_q_actual
+    )
+    print("\nDRY-RUN LIMITER REPORT")
+    for i, name in enumerate(JOINT_ORDER):
+        print(
+            f"  {name:20s} max|delta|={max_limiter_delta[i]:.6f} rad  "
+            f"hard={limiter_counts['hard_limit_active'][i]}  "
+            f"rate={limiter_counts['rate_limit_active'][i]}  "
+            f"torque={limiter_counts['torque_budget_limit_active'][i]}"
+        )
+    abort_cycles = int(config.get("limiter_abort_consecutive_cycles", 5))
+    if maximum_excessive_cycles >= abort_cycles:
+        print(
+            "WARNING: this command would trigger the real-hardware limiter "
+            f"distortion abort ({maximum_excessive_cycles} consecutive cycles; "
+            f"threshold={abort_cycles}). Do not run hardware until reviewed."
+        )
+    else:
+        print("Limiter distortion abort check: PASS")
+    print(f"PACE tensor dataset: {pace_path}")
     return csv_path, len(samples)
 
 
@@ -256,6 +475,39 @@ def verify_deployment_contract(config, deploy_root):
     if mismatches:
         raise RuntimeError(
             "PACE/deployment calibration contract differs: " + ", ".join(mismatches)
+        )
+
+
+def print_terminal_monitor(sample, q_requested, q_des, q_actual, qd_actual, diagnostics):
+    tracking = q_des - q_actual
+    limiter_delta = q_des - q_requested
+    active = []
+    for label, key in (
+        ("hard", "hard_limit_active"),
+        ("rate", "rate_limit_active"),
+        ("torque", "torque_budget_limit_active"),
+    ):
+        joints = [
+            JOINT_ORDER[i] for i in np.flatnonzero(diagnostics[key])
+        ]
+        if joints:
+            active.append(f"{label}=" + ",".join(joints))
+    frequency = sample.instantaneous_frequency_hz
+    frequency_text = "n/a" if frequency is None else f"{frequency:.3f} Hz"
+    print("\nPACE STATUS")
+    print(
+        f"segment={sample.segment} segment_t={sample.segment_time_s:.2f}s "
+        f"frequency={frequency_text} "
+        f"max|tracking|={np.max(np.abs(tracking)):.4f}rad "
+        f"max|limiter|={np.max(np.abs(limiter_delta)):.4f}rad "
+        f"active={'none' if not active else '; '.join(active)}"
+    )
+    print("joint                 q_req     q_des     q_actual  tracking  limiter   qd")
+    for i, name in enumerate(JOINT_ORDER):
+        print(
+            f"{name:20s} {q_requested[i]:+8.4f} {q_des[i]:+8.4f} "
+            f"{q_actual[i]:+9.4f} {tracking[i]:+9.4f} "
+            f"{limiter_delta[i]:+8.4f} {qd_actual[i]:+8.4f}"
         )
 
 
@@ -341,6 +593,11 @@ def run_hardware(
     feedback_timeout = float(config.get("feedback_timeout_s", 0.012))
     enabled = False
     logger = None
+    csv_path = None
+    pace_times = []
+    pace_q_des = []
+    pace_q_actual = []
+    completed = False
     stop_requested = False
 
     def request_stop(_signal=None, _frame=None):
@@ -365,8 +622,22 @@ def run_hardware(
         trajectory_spec, samples = load_trajectory(
             trajectory_path, initial_q, expected_hz=50.0
         )
+        validate_requested_trajectory(config, trajectory_spec, samples)
+        trajectory_report(trajectory_spec, samples, control_hz=50.0)
+        warning_delta = float(config.get("limiter_warning_delta_rad", 0.005))
+        abort_delta = float(config.get("limiter_abort_delta_rad", 0.03))
+        abort_cycles = int(config.get("limiter_abort_consecutive_cycles", 5))
+        status_hz = float(config.get("terminal_status_hz", 2.0))
+        if warning_delta < 0.0 or abort_delta <= warning_delta:
+            raise ValueError("limiter thresholds require 0 <= warning < abort")
+        if abort_cycles < 1:
+            raise ValueError("limiter_abort_consecutive_cycles must be positive")
+        if status_hz <= 0.0 or status_hz > 50.0:
+            raise ValueError("terminal_status_hz must be in (0, 50]")
+        status_interval = max(1, int(round(50.0 / status_hz)))
         print("\nPACE REAL-HARDWARE TEST")
-        print("Joint order:", ", ".join(JOINT_ORDER))
+        print("Internal joint order:", ", ".join(JOINT_ORDER))
+        print("PACE export order:", ", ".join(PACE_EXPORT_ORDER))
         print("Samples:", len(samples), "Duration:", len(samples) * dt, "s")
         print("Initial q:", np.array2string(initial_q, precision=4))
         print("The robot must be suspended and the area clear.")
@@ -395,6 +666,8 @@ def run_hardware(
         start = time.monotonic()
         previous_cycle = start
         consecutive_overruns = 0
+        consecutive_limiter_distortion = 0
+        last_limiter_warning_sample = -status_interval
 
         for sample in samples:
             if stop_requested:
@@ -416,9 +689,9 @@ def run_hardware(
 
             q_actual_before = np.asarray(estimator.q_current, dtype=np.float64).copy()
             qd_actual_before = np.asarray(estimator.qd_current, dtype=np.float64).copy()
-            q_prepared = final_command_target(
+            q_prepared, diagnostics = final_command_target(
                 sample.q_requested, q_des_previous, q_actual_before,
-                qd_actual_before, config, dt,
+                qd_actual_before, config, dt, return_diagnostics=True,
             )
             commands = layer.build_mit_commands(
                 q_prepared,
@@ -454,6 +727,8 @@ def run_hardware(
                 missing = sorted(expected - received)
                 safety_reasons.append(f"incomplete current-cycle feedback: {missing}")
             q_des_sent = np.zeros(JOINT_COUNT, dtype=np.float64)
+            q_actual_cycle = np.full(JOINT_COUNT, np.nan, dtype=np.float64)
+            qd_actual_cycle = np.full(JOINT_COUNT, np.nan, dtype=np.float64)
             for i, name in enumerate(JOINT_ORDER):
                 cmd = command_by_joint[name]
                 fb = feedback_by_joint.get(name, {})
@@ -467,6 +742,8 @@ def run_hardware(
                 qd_raw = float(fb.get("velocity_raw", float("nan")))
                 torque = float(fb.get("joint_torque", float("nan")))
                 q_des_sent[i] = float(cmd["q_des"])
+                q_actual_cycle[i] = q_actual
+                qd_actual_cycle[i] = qd_actual
                 if fault_bits:
                     safety_reasons.append(f"{name} fault_bits=0x{fault_bits:X}")
                 q_min = float(config["joint_limits"][name]["min"])
@@ -477,19 +754,32 @@ def run_hardware(
                     safety_reasons.append(
                         f"{name} position={q_actual:.4f} outside [{q_min:.4f},{q_max:.4f}]"
                     )
+                if not math.isfinite(qd_actual):
+                    safety_reasons.append(f"{name} velocity feedback is invalid")
+                elif abs(qd_actual) > float(config["max_velocity_rad_s"]):
+                    safety_reasons.append(f"{name} velocity={qd_actual:.3f}rad/s")
                 if math.isfinite(temperature) and temperature > float(config["max_temperature_c"]):
                     safety_reasons.append(f"{name} temperature={temperature:.1f}C")
-                if math.isfinite(qd_actual) and abs(qd_actual) > float(config["max_velocity_rad_s"]):
-                    safety_reasons.append(f"{name} velocity={qd_actual:.3f}rad/s")
                 if math.isfinite(torque) and abs(torque) > float(config["max_measured_torque_nm"]):
                     safety_reasons.append(f"{name} torque={torque:.3f}Nm")
-                if math.isfinite(fb_age) and fb_age > float(config["max_feedback_age_s"]):
+                if not math.isfinite(fb_age) or fb_age < 0.0:
+                    safety_reasons.append(f"{name} feedback timestamp is invalid")
+                elif fb_age > float(config["max_feedback_age_s"]):
                     safety_reasons.append(f"{name} feedback_age={fb_age:.4f}s")
 
                 values = {
                     "q_requested": sample.q_requested[i], "q_des": cmd["q_des"],
                     "q_actual": q_actual, "qd_actual": qd_actual,
                     "q_raw": q_raw, "qd_raw": qd_raw,
+                    "limiter_delta": float(cmd["q_des"]) - sample.q_requested[i],
+                    "limiter_abs_delta": abs(
+                        float(cmd["q_des"]) - sample.q_requested[i]
+                    ),
+                    "hard_limit_active": bool(diagnostics["hard_limit_active"][i]),
+                    "rate_limit_active": bool(diagnostics["rate_limit_active"][i]),
+                    "torque_budget_limit_active": bool(
+                        diagnostics["torque_budget_limit_active"][i]
+                    ),
                     "kp": cmd["kp_effective"], "kd": cmd["kd_effective"],
                     "v_des": cmd["joint_v_des"],
                     "tau_ff": cmd["joint_tau_ff_effective"],
@@ -506,16 +796,45 @@ def run_hardware(
                  if row[f"{name}_feedback_age_s"] != ""],
                 default=float("nan"),
             )
+            limiter_abs_delta = np.abs(q_des_sent - sample.q_requested)
+            max_limiter_delta = float(np.max(limiter_abs_delta))
+            if max_limiter_delta > warning_delta:
+                if sample.index - last_limiter_warning_sample >= status_interval:
+                    worst = int(np.argmax(limiter_abs_delta))
+                    print(
+                        "WARNING: limiter changed "
+                        f"{JOINT_ORDER[worst]} by {limiter_abs_delta[worst]:.6f} rad "
+                        f"at sample {sample.index}"
+                    )
+                    last_limiter_warning_sample = sample.index
+            if max_limiter_delta > abort_delta:
+                consecutive_limiter_distortion += 1
+            else:
+                consecutive_limiter_distortion = 0
+            if consecutive_limiter_distortion >= abort_cycles:
+                safety_reasons.append(
+                    "sustained limiter distortion: "
+                    f"max|q_des-q_requested|={max_limiter_delta:.6f}rad "
+                    f"for {consecutive_limiter_distortion} cycles"
+                )
             row["safety_event"] = "; ".join(safety_reasons)
             logger.write(row)
+            if not safety_reasons and complete and np.all(np.isfinite(q_actual_cycle)):
+                pace_times.append(command_time)
+                pace_q_des.append(q_des_sent.copy())
+                pace_q_actual.append(q_actual_cycle.copy())
+            if sample.index % status_interval == 0:
+                print_terminal_monitor(
+                    sample, sample.q_requested, q_des_sent,
+                    q_actual_cycle, qd_actual_cycle, diagnostics,
+                )
             q_des_previous = q_des_sent
             if safety_reasons:
                 raise RuntimeError(row["safety_event"])
 
+        completed = True
         return csv_path, len(samples)
     finally:
-        if logger is not None:
-            logger.close()
         if enabled:
             try:
                 for _ in range(3):
@@ -523,6 +842,25 @@ def run_hardware(
                     time.sleep(0.02)
             except Exception as exc:
                 print(f"WARNING: motor stop failed: {exc}", file=sys.stderr)
+        if logger is not None:
+            logger.close()
+        if completed and csv_path is not None and pace_times:
+            try:
+                pace_path = save_pace_dataset(
+                    csv_path.parent / "chirp_data.pt",
+                    pace_times,
+                    pace_q_des,
+                    pace_q_actual,
+                )
+                print(f"PACE tensor dataset: {pace_path}")
+            except Exception as exc:
+                print(f"WARNING: PACE tensor export failed: {exc}", file=sys.stderr)
+        elif csv_path is not None and pace_times:
+            print(
+                "PACE tensor dataset not written because the experiment did not "
+                "complete successfully.",
+                file=sys.stderr,
+            )
         close_can_buses(buses)
         signal.signal(signal.SIGINT, old_sigint)
         signal.signal(signal.SIGTERM, old_sigterm)
