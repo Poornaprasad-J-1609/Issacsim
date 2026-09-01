@@ -130,6 +130,11 @@ debug CSV and use only feedback that is still inside the configured freshness
 limit. They are omitted from `chirp_data.pt` rather than exporting a held value
 as a new measurement. Sustained loss safely aborts the experiment.
 
+The active loop disables cyclic garbage collection and uses compact one-line
+asynchronous terminal status. An isolated long host pause is logged and the
+deadline scheduler resynchronizes before the next command instead of sending a
+burst of catch-up commands. Repeated independent overruns still abort.
+
 ## Real suspended test
 
 Review every requested angle, physically suspend the robot, clear the work

@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import gc
 import json
 import math
 import os
@@ -280,6 +281,7 @@ def csv_fieldnames():
         "sample_index", "time_s", "nominal_time_s", "command_time_s",
         "feedback_time_s", "control_dt_s", "loop_frequency_hz",
         "loop_lateness_s", "loop_work_s", "deadline_missed",
+        "scheduler_resynchronized",
         "instantaneous_frequency_hz",
         "trajectory_segment", "feedback_complete", "feedback_max_age_s",
         "feedback_missing", "safety_event",
@@ -359,6 +361,7 @@ def _base_row(
         "loop_lateness_s": lateness,
         "loop_work_s": work_s,
         "deadline_missed": bool(deadline_missed),
+        "scheduler_resynchronized": False,
         "instantaneous_frequency_hz": (
             "" if instantaneous_frequency_hz is None
             else float(instantaneous_frequency_hz)
@@ -390,6 +393,14 @@ def timing_summary(control_hz, loop_dts, loop_work, missed_deadlines, label="CON
     print(f"worst dt               : {1000.0 * valid.max():.3f} ms")
     print(f"worst loop duration    : {1000.0 * work.max():.3f} ms")
     print(f"missed deadlines       : {int(missed_deadlines)}")
+
+
+def next_control_deadline(deadline, wake_time, dt, severe_lateness):
+    """Advance one period, resynchronizing after an isolated long host pause."""
+    lateness = max(0.0, float(wake_time) - float(deadline))
+    resynchronized = lateness > float(severe_lateness)
+    anchor = float(wake_time) if resynchronized else float(deadline)
+    return anchor + float(dt), resynchronized
 
 
 def run_dry(config, config_path, trajectory_path, output_root, dataset_name, initial_q):
@@ -594,26 +605,20 @@ def print_terminal_monitor(
             active.append(f"{label}=" + ",".join(joints))
     frequency = sample.instantaneous_frequency_hz
     frequency_text = "n/a" if frequency is None else f"{frequency:.3f} Hz"
-    print("\nPACE STATUS")
-    if np.max(np.abs(limiter_delta)) > limiter_warning_delta_rad:
-        print(
-            "WARNING: q_des differs from q_requested by more than "
-            f"{limiter_warning_delta_rad:.4f} rad"
-        )
+    tracking_index = int(np.argmax(np.abs(tracking)))
+    warning = (
+        " LIMITER_WARNING"
+        if np.max(np.abs(limiter_delta)) > limiter_warning_delta_rad else ""
+    )
     print(
-        f"segment={sample.segment} segment_t={sample.segment_time_s:.2f}s "
+        f"PACE segment={sample.segment} t={sample.segment_time_s:.2f}s "
         f"frequency={frequency_text} "
         f"max|tracking|={np.max(np.abs(tracking)):.4f}rad "
+        f"tracking_joint={JOINT_ORDER[tracking_index]} "
         f"max|limiter|={np.max(np.abs(limiter_delta)):.4f}rad "
-        f"active={'none' if not active else '; '.join(active)}"
+        f"max|qd|={np.max(np.abs(qd_actual)):.4f}rad/s "
+        f"active={'none' if not active else ';'.join(active)}{warning}"
     )
-    print("joint                 q_req     q_des     q_actual  tracking  limiter   qd")
-    for i, name in enumerate(JOINT_ORDER):
-        print(
-            f"{name:20s} {q_requested[i]:+8.4f} {q_des[i]:+8.4f} "
-            f"{q_actual[i]:+9.4f} {tracking[i]:+9.4f} "
-            f"{limiter_delta[i]:+8.4f} {qd_actual[i]:+8.4f}"
-        )
 
 
 class AsyncTerminalMonitor:
@@ -904,12 +909,14 @@ def run_hardware(
     loop_dts = []
     loop_work = []
     missed_deadlines = 0
+    scheduler_resynchronizations = 0
     feedback_dropout_cycles = 0
     consecutive_incomplete_feedback = 0
     maximum_consecutive_incomplete_feedback = 0
     completed = False
     stop_requested = False
     terminal_monitor = None
+    gc_disabled_for_control = False
 
     def request_stop(_signal=None, _frame=None):
         nonlocal stop_requested
@@ -997,6 +1004,7 @@ def run_hardware(
         terminal_monitor = AsyncTerminalMonitor()
         q_des_previous = initial_q.copy()
         start = time.monotonic()
+        next_deadline = start
         previous_control_timestamp = start - dt
         consecutive_severe_misses = 0
         consecutive_limiter_distortion = 0
@@ -1013,11 +1021,15 @@ def run_hardware(
                 "feedback_dropout_abort_consecutive_cycles must be positive"
             )
         sample_index = 0
+        if gc.isenabled():
+            gc.collect()
+            gc.disable()
+            gc_disabled_for_control = True
 
         while True:
             if stop_requested:
                 raise RuntimeError("operator stop requested")
-            deadline = start + sample_index * dt
+            deadline = next_deadline
             wait = deadline - time.monotonic()
             if wait > 0.0:
                 time.sleep(wait)
@@ -1026,7 +1038,14 @@ def run_hardware(
             deadline_missed = lateness > deadline_tolerance
             if deadline_missed:
                 missed_deadlines += 1
-            if lateness > severe_lateness:
+            next_deadline, scheduler_resynchronized = next_control_deadline(
+                deadline,
+                cycle_wake,
+                dt,
+                severe_lateness,
+            )
+            if scheduler_resynchronized:
+                scheduler_resynchronizations += 1
                 consecutive_severe_misses += 1
             else:
                 consecutive_severe_misses = 0
@@ -1081,6 +1100,7 @@ def run_hardware(
                 actual_dt, lateness, 0.0, deadline_missed, sample.segment,
                 sample.instantaneous_frequency_hz,
             )
+            row["scheduler_resynchronized"] = scheduler_resynchronized
             row["feedback_complete"] = bool(complete)
 
             safety_reasons = []
@@ -1243,6 +1263,8 @@ def run_hardware(
                     time.sleep(max(dt, 0.01))
             except Exception as exc:
                 print(f"WARNING: motor stop failed: {exc}", file=sys.stderr)
+        if gc_disabled_for_control:
+            gc.enable()
         if terminal_monitor is not None:
             terminal_monitor.close()
         if logger is not None:
@@ -1280,6 +1302,10 @@ def run_hardware(
             print(
                 "maximum consecutive incomplete feedback cycles: "
                 f"{maximum_consecutive_incomplete_feedback}"
+            )
+            print(
+                "scheduler resynchronizations: "
+                f"{scheduler_resynchronizations}"
             )
         try:
             close_can_buses(buses)

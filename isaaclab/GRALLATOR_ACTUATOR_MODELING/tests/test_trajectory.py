@@ -12,6 +12,7 @@ from pace_modeling.constants import (
 from pace_modeling.controller import (
     final_command_target,
     load_yaml,
+    next_control_deadline,
     validate_requested_trajectory,
     verify_deployment_contract,
 )
@@ -193,6 +194,25 @@ class TrajectoryTests(unittest.TestCase):
             sample.instantaneous_frequency_hz,
             f_start + slope * local_time,
         )
+
+    def test_deadline_resynchronizes_after_one_long_pause(self):
+        next_deadline, resynchronized = next_control_deadline(
+            deadline=10.000,
+            wake_time=10.020,
+            dt=0.005,
+            severe_lateness=0.005,
+        )
+        self.assertTrue(resynchronized)
+        self.assertAlmostEqual(next_deadline, 10.025)
+
+        following, resynchronized = next_control_deadline(
+            deadline=next_deadline,
+            wake_time=10.0251,
+            dt=0.005,
+            severe_lateness=0.005,
+        )
+        self.assertFalse(resynchronized)
+        self.assertAlmostEqual(following, 10.030)
 
 
 if __name__ == "__main__":
