@@ -8,10 +8,10 @@ timing_validation_warmup_cycles: 20
 timing_validation_max_dropout_fraction: 0.001
 feedback_dropout_abort_consecutive_cycles: 3
 
-# Conservative suspended-test defaults. These values are metadata and are also
-# the actual effective gains requested in every PACE command packet.
-kp: 50.0
-kd: 2.0
+# Suspended identification gains. These values are metadata and are also the
+# actual effective gains requested in every PACE command packet.
+kp: 250.0
+kd: 4.0
 
 # Limits are applied before packet construction. The resulting q_des is logged.
 max_command_rate_rad_s:
@@ -28,8 +28,8 @@ max_command_rate_rad_s:
   BL_calf_joint: 0.60
   BR_calf_joint: 0.60
 
-max_estimated_torque_nm: 20.0
-max_measured_torque_nm: 25.0
+max_estimated_torque_nm: 100.0
+max_measured_torque_nm: 100.0
 max_velocity_rad_s: 6.0
 max_temperature_c: 65.0
 max_tracking_error_rad: 0.40
