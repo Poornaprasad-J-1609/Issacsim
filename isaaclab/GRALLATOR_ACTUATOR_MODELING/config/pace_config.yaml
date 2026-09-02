@@ -103,10 +103,10 @@ joint_offsets:
   BR_calf_joint: 0.0
 
 joint_limits:
-  FL_hip_joint: {min: -0.60, max: 0.60}
-  FR_hip_joint: {min: -0.60, max: 0.60}
-  BL_hip_joint: {min: -0.60, max: 0.60}
-  BR_hip_joint: {min: -0.60, max: 0.60}
+  FL_hip_joint: {min: -0.70, max: 0.70}
+  FR_hip_joint: {min: -0.70, max: 0.70}
+  BL_hip_joint: {min: -0.70, max: 0.70}
+  BR_hip_joint: {min: -0.70, max: 0.70}
   FL_thigh_joint: {min: -2.0, max: 2.0}
   FR_thigh_joint: {min: -2.0, max: 2.0}
   BL_thigh_joint: {min: -2.0, max: 2.0}

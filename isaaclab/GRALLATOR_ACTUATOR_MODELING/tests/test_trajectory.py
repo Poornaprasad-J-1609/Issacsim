@@ -113,11 +113,13 @@ class TrajectoryTests(unittest.TestCase):
             float(spec["dry_run_initial_q"][name]) for name in JOINT_ORDER
         ])
         fl_hip = JOINT_ORDER.index("FL_hip_joint")
-        initial[fl_hip] = -0.606996
+        hard_min = float(config["joint_limits"]["FL_hip_joint"]["min"])
+        tolerance = float(config["initial_pose_hard_limit_tolerance_rad"])
+        initial[fl_hip] = hard_min - 0.006996
         samples = build_trajectory(spec, initial, expected_hz=200.0)
         validate_requested_trajectory(config, spec, samples)
 
-        initial[fl_hip] = -0.621
+        initial[fl_hip] = hard_min - tolerance - 0.001
         samples = build_trajectory(spec, initial, expected_hz=200.0)
         with self.assertRaisesRegex(ValueError, "hard limit plus tolerance"):
             validate_requested_trajectory(config, spec, samples)
